@@ -8,11 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Added
 
-### Changed
-
-### Updated
-
-### Added
-
+- Basic parsers for energy, gradient, Hessian (frequencies) calculations.
+- Can return either `AtomicResult` or `FailedOperation` objects depending on whether calculation succeeded or failed.
+- Tests for all parsers and the main `parse` function.
 
 [unreleased]: https://github.com/mtzgroup/bigchem/compare/0.4.0...HEAD
