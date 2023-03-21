@@ -3,7 +3,7 @@ import re
 from .exceptions import MatchNotFoundError
 
 
-def parse_final_energy(input: str) -> float:
+def parse_energy(input: str) -> float:
     """Parse the final energy from TeraChem stdout
 
     Args:
