@@ -16,6 +16,7 @@ def parse_final_energy(input: str) -> float:
         MatchNotFoundError: If no match is found
     """
     regex = r"FINAL ENERGY: (-?\d+(?:\.\d+)?)"
+
     match = re.search(regex, input)
     if not match:
         raise MatchNotFoundError(
