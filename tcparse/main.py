@@ -16,5 +16,10 @@ def parse_directory(
 
     Returns:
         AtomicResult object encapsulating the data from the TeraChem output directory.
+
+
+    # NOTE:
+        - I may not need a "directory" or the geom_file name because this is contained
+            in the terachem output file itself as "XYZ coordinates"
     """
     pass
