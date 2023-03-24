@@ -16,6 +16,10 @@ from .parsers import (
     parse_gradient,
     parse_hessian,
     parse_method,
+    parse_natoms,
+    parse_nmo,
+    parse_spin_multiplicity,
+    parse_total_charge,
     parse_version,
     parse_xyz_filepath,
 )
@@ -60,20 +64,24 @@ def parse(
         properties: Dict[str, Any] = {}  # Various computed properties
         return_result: Union[float, List[List[float]]]  # energy or grad/hess matrix
 
-        # Always parse energy
+        # Update Molecule with computed properties
+        mol_dict = molecule.dict()
+        mol_dict["molecular_charge"] = parse_total_charge(tcout)
+        mol_dict["molecular_multiplicity"] = parse_spin_multiplicity(tcout)
+
+        # Always parse these values
         return_result = properties["return_energy"] = parse_energy(tcout)
+        properties["calcinfo_natom"] = parse_natoms(tcout)
+        properties["calcinfo_nmo"] = parse_nmo(tcout)
 
         if driver in (SupportedDrivers.gradient, SupportedDrivers.hessian):
             return_result = properties["return_gradient"] = parse_gradient(tcout)
-            # Silly qcel requires calcinfo_natom for grad/hess validation instead of using .molecule
-            # Using len(grad) instead of len(molecule.symbols) in case using a fake molecule
-            properties["calcinfo_natom"] = len(return_result)
 
         if driver == SupportedDrivers.hessian:
             return_result = properties["return_hessian"] = parse_hessian(tcout)
 
         return AtomicResult(
-            molecule=molecule,
+            molecule=mol_dict,
             driver=driver,
             model=model,
             return_result=return_result,

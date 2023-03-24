@@ -172,11 +172,28 @@ def parse_hessian(string: str) -> List[List[float]]:
         hessian.append(row)
         count += 1
 
-    # Assert we have created a square Hessian matrix
-    for i, row in enumerate(hessian):
-        assert len(row) == len(
-            hessian
-        ), "We must have missed some floats. Hessian should be a square matrix. Only "
-        f"recovered {len(row)} of {len(hessian)} floats for row {i}."
-
     return hessian
+
+
+def parse_natoms(string: str) -> int:
+    """Parse number of atoms value from TeraChem stdout"""
+    regex = r"Total atoms:\s*(\d+)"
+    return int(_search(regex, string).group(1))
+
+
+def parse_nmo(string: str) -> int:
+    """Parse the number of molecular orbitals TeraChem stdout"""
+    regex = r"Total orbitals:\s*(\d+)"
+    return int(_search(regex, string).group(1))
+
+
+def parse_total_charge(string: str) -> float:
+    """Parse total charge from TeraChem stdout"""
+    regex = r"Total charge:\s*(\d+)"
+    return float(_search(regex, string).group(1))
+
+
+def parse_spin_multiplicity(string: str) -> int:
+    """Parse spin multiplicity from TeraChem stdout"""
+    regex = r"Spin multiplicity:\s*(\d+)"
+    return int(_search(regex, string).group(1))

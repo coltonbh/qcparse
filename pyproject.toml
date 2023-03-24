@@ -21,6 +21,9 @@ pre-commit = "^3.2.0"
 pytest-cov = "^4.0.0"
 autoflake = "^2.0.2"
 
+[tool.poetry.scripts]
+tcparse = "tcparse.cli:main"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
