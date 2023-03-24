@@ -7,6 +7,7 @@ repos:
       - id: check-yaml
       - id: check-added-large-files
         args: ["--maxkb=250"]
+        exclude: caffeine.frequencies.out
   - repo: https://github.com/Yelp/detect-secrets
     rev: v1.4.0
     hooks:

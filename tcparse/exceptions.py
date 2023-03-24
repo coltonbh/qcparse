@@ -1,6 +1,6 @@
-class BaseException(Exception):
+class BaseError(Exception):
     """Base tcparse exceptions"""
 
 
-class MatchNotFoundError(BaseException):
+class MatchNotFoundError(BaseError):
     """Exception raised when a parsing match is not found"""

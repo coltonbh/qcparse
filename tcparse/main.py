@@ -17,9 +17,11 @@ from .parsers import (
     parse_xyz_filepath,
 )
 
+__all__ = ["parse"]
+
 
 def parse(
-    outfile: Union[Path, str] = Path("tc.out")
+    outfile: Union[Path, str] = Path("tc.out"), ignore_molecule: bool = False
 ) -> Union[AtomicResult, FailedOperation]:
     """Parse a TeraChem stdout file
 
@@ -30,37 +32,61 @@ def parse(
         AtomicResult or FailedOperation object encapsulating the data from the TeraChem
         output directory.
     """
-    outfile = Path(outfile)
+    outfile = Path(outfile)  # Cast outfile to Path
 
-    # Read stdout
+    # Read in TeraChem's stdout
     with open(outfile) as f:
         tcstdout = f.read()
 
-    molecule = Molecule.from_file(outfile / parse_xyz_filepath(tcstdout))
+    if ignore_molecule:
+        # Use a placeholder Hydrogen Atom
+        molecule = Molecule.from_data(
+            """
+    H  0.000000   0.000000   0.000000
+    """,
+            extras={
+                "NOTICE": (
+                    "This the data parsed in this AtomicResult does NOT "
+                    "correspond to this molecule. This is a simple Hydrogen atom used "
+                    "as a placeholder."
+                )
+            },
+        )
+    else:
+        molecule = Molecule.from_file(outfile.parent / parse_xyz_filepath(tcstdout))
 
     # Values to parse whether calculation was a success or failure
-    driver = str(parse_driver(tcstdout))  # returns SupportedDriver
-    method = parse_method(tcstdout)
-    basis = parse_basis(tcstdout)
-    model = {"method": method, "basis": basis}
+    driver = parse_driver(tcstdout)  # returns SupportedDriver
+    model = {"method": parse_method(tcstdout), "basis": parse_basis(tcstdout)}
     tc_version = parse_version(tcstdout)
     success = calculation_succeeded(tcstdout)
 
     if success:
-        atomic_result_properties: Dict[str, Any] = {}  # Define for collecting values
-        energy = parse_energy(tcstdout)  # always parse energy
-        # Parse gradient/hessian only if this is the specific runtype
-        return_result: Union[float, List[List[float]]]
+        # Define basic objects for capturing output values
+        atomic_result_properties: Dict[
+            str, Any
+        ] = {}  # Will become AtomicResultProperties
+        return_result: Union[
+            float, List[List[float]]
+        ]  # May be energy, gradient, or hessian
+        # Properties from Molecule (silly qcel requires these for grad/hess validation)
+        atomic_result_properties["calcinfo_natom"] = len(molecule.symbols)
+        # Always parse energy
+        energy = parse_energy(tcstdout)  # Always parse energy for all drivers
+
+        # Parse gradient/hessian if these were the given drivers
         if driver == SupportedDrivers.gradient:
             gradient = parse_gradient(tcstdout)
-            atomic_result_properties["return_gradient"] == gradient
+            atomic_result_properties["return_gradient"] = gradient
             return_result = gradient
         elif driver == SupportedDrivers.hessian:
             hessian = parse_hessian(tcstdout)
-            atomic_result_properties["return_hessian"] == hessian
+            gradient = parse_gradient(tcstdout)
+            atomic_result_properties["return_hessian"] = hessian
+            atomic_result_properties["return_gradient"] = gradient
             return_result = hessian
         else:
-            atomic_result_properties["return_energy"] == energy
+            atomic_result_properties["return_energy"] = energy
             return_result = energy
 
         return AtomicResult(
@@ -89,3 +115,7 @@ def parse(
                 "extras": {"stdout": tcstdout},
             },
         )
+
+
+if __name__ == "__main__":
+    ar = parse("tests/data/failure.nocuda.out")

@@ -11,5 +11,5 @@ def test_data_dir():
 
 @pytest.fixture
 def energy_output(test_data_dir):
-    with open(test_data_dir / "energy.out") as f:
+    with open(test_data_dir / "water.energy.out") as f:
         return f.read()
