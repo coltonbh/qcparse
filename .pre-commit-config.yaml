@@ -7,6 +7,7 @@ repos:
       - id: check-yaml
       - id: check-added-large-files
         args: ["--maxkb=250"]
+        exclude: caffeine.frequencies.out
   - repo: https://github.com/Yelp/detect-secrets
     rev: v1.4.0
     hooks:
@@ -37,6 +38,6 @@ repos:
         name: tests
         stages: [push]
         language: system
-        entry: sh scripts/test.sh
+        entry: poetry run pytest --cov-report html:htmlcov --cov -v
         types: [python]
         pass_filenames: false
