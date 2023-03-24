@@ -13,6 +13,10 @@ from tcparse.parsers import (
     parse_gradient,
     parse_hessian,
     parse_method,
+    parse_natoms,
+    parse_nmo,
+    parse_spin_multiplicity,
+    parse_total_charge,
     parse_version,
     parse_xyz_filepath,
 )
@@ -198,3 +202,47 @@ def test_parse_hessian(test_data_dir, filename, hessian):
         tcout = f.read()
     assert parse_hessian(tcout) == hessian
     print("hi")
+
+
+@pytest.mark.parametrize(
+    "filename,n_atoms",
+    (("water.energy.out", 3), ("caffeine.gradient.out", 24)),
+)
+def test_parse_natoms(test_data_dir, filename, n_atoms):
+    with open(test_data_dir / filename) as f:
+        tcout = f.read()
+    n = parse_natoms(tcout)
+    assert n == n_atoms
+
+
+@pytest.mark.parametrize(
+    "filename,nmo",
+    (("water.energy.out", 13), ("caffeine.gradient.out", 146)),
+)
+def test_parse_nmo(test_data_dir, filename, nmo):
+    with open(test_data_dir / filename) as f:
+        tcout = f.read()
+    n = parse_nmo(tcout)
+    assert n == nmo
+
+
+@pytest.mark.parametrize(
+    "filename,nmo",
+    (("water.energy.out", 0), ("caffeine.gradient.out", 0)),
+)
+def test_parse_total_charge(test_data_dir, filename, nmo):
+    with open(test_data_dir / filename) as f:
+        tcout = f.read()
+    n = parse_total_charge(tcout)
+    assert n == nmo
+
+
+@pytest.mark.parametrize(
+    "filename,multiplicity",
+    (("water.energy.out", 1), ("caffeine.gradient.out", 1)),
+)
+def test_parse_spin_multiplicity(test_data_dir, filename, multiplicity):
+    with open(test_data_dir / filename) as f:
+        tcout = f.read()
+    n = parse_spin_multiplicity(tcout)
+    assert n == multiplicity

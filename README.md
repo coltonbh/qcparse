@@ -4,7 +4,11 @@ A library for parsing TeraChem output files into structured MolSSI data objects.
 
 ## ✨ Basic Usage
 
-- Install `tcparse` with `python -m pip install tcparse`
+- Installation:
+
+  ```sh
+  python -m pip install tcparse
+  ```
 
 - Parse files into `AtomicResult` or `FailedOperation` objects with a single line of code.
 
@@ -20,8 +24,8 @@ A library for parsing TeraChem output files into structured MolSSI data objects.
   from tcparse import parse
 
   result = parse("/path/to/tc.out", ignore_xyz=True)
-  result.return_result # Real value from tc.out
-  result.molecule # Dummy hydrogen molecule
+  print(result) # Real results from tc.out
+  print(result.molecule) # Dummy hydrogen molecule
   ```
 
 - The `result` object will be either an `AtomicResult` or `FailedOperation`. Run `dir(result)` inside a Python interpreter to see the various values you can access. A few prominent values are shown here as an example:
@@ -48,6 +52,32 @@ A library for parsing TeraChem output files into structured MolSSI data objects.
       result.input_data # Basic data about the inputs supplied, does NOT include keywords
       result.error.error_message # Parsed error message from TeraChem stdout
       result.error.extras['stdout'] # Full TeraChem stdout
+  ```
+
+- Parsed results can be written to disk like this:
+
+  ```py
+  with open("myresult.json", "w") as f:
+      f.write(result.json())
+  ```
+
+- And read from disk like this:
+
+  ```py
+  from qcelemental.models import AtomicResult, FailedOperation
+
+  successful_result = AtomicResult.parse_file("myresult.json")
+  failed_result = FailedOperation.parse_file("myfailure.json")
+  ```
+
+- You can also run `tcparse` from the command line like this:
+
+  ```sh
+  tcparse -h # Get help message for cli
+
+  tcparse ./path/to/tc.out > myoutput.json # Parse TeraChem stdout to json
+
+  tcparse --ignore_xyz ./path/to/tc.out > myoutput.json # Ignore the XYZ file in the TeraChem stdout. Helpful in case the XYZ file is not longer available in the location specified in the file.
   ```
 
 ## 🤩 Next Steps

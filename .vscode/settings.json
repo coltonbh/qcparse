@@ -5,6 +5,7 @@
         "CUDA",
         "Hartree",
         "natom",
+        "natoms",
         "nocuda",
         "qcel",
         "tcout",
