@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "tcparse"
-version = "0.1.0"
+version = "0.2.0"
 description = "A package for parsing TeraChem file outputs into structured MolSSI data objects."
 authors = ["Colton Hicks <github@coltonhicks.com>"]
 license = "MIT"
