@@ -104,7 +104,7 @@ def parse_version(string: str) -> str:
 # Factored out for use in calculation_succeeded and parse_failure_text
 FAILURE_REGEXPS = (
     r"DIE called at line number .*",
-    r"CUDA error: no CUDA-capable device is detected.*",
+    r"CUDA error:.*",
 )
 
 
