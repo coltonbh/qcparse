@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [unreleased]
 
+### Changed
+
+- Dropped support for `QCSchema` models and changed to [qcio](https://github.com/coltonbh/qcio) data models.
+- `parse` function now raises `NotImplementedError` and the default use case is to use `parse_computed_prop` instead and ignore inputs and provenance data. This is the minimum spec since QC programs can be powered using structured inputs and [qcop](https://github.com/coltonbh/qcop). I may go back to parsing entire `SinglePointSuccess/FailedOutput` objects if use cases arise.
+
 ## [0.2.1]
 
 ### Changed

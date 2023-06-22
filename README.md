@@ -1,107 +1,94 @@
-# tcparse
+# qcparse
 
-A library for parsing TeraChem output files into structured MolSSI data objects.
+A library for parsing Quantum Chemistry output files into structured data objects. Uses data structures from [qcio](https://github.com/coltonbh/qcio).
+
+[![image](https://img.shields.io/pypi/v/qcparse.svg)](https://pypi.python.org/pypi/qcparse)
+[![image](https://img.shields.io/pypi/l/qcparse.svg)](https://pypi.python.org/pypi/qcparse)
+[![image](https://img.shields.io/pypi/pyversions/qcparse.svg)](https://pypi.python.org/pypi/qcparse)
+[![Actions status](https://github.com/coltonbh/qcparse/workflows/Tests/badge.svg)](https://github.com/coltonbh/qcparse/actions)
+[![Actions status](https://github.com/coltonbh/qcparse/workflows/Basic%20Code%20Quality/badge.svg)](https://github.com/coltonbh/qcparse/actions)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/charliermarsh/ruff/main/assets/badge/v1.json)](https://github.com/charliermarsh/ruff)
+
+## ☝️ NOTE
+
+This package was originally designed to run as a standalone parser to generate `SinglePointSuccessfulOutput` and `SinglePointFailedOutput` objects parsing all input and provenance data in addition to computed output data; however, once [qcop](https://github.com/coltonbh/qcop) was built to power quantum chemistry programs the only parsing needed was for the simpler `SinglePointComputedProperties` values. There are still remnants of the original `parse` function in the repo and I've left them for now in case I find a use for the general purpose parsing.
 
 ## ✨ Basic Usage
 
 - Installation:
 
   ```sh
-  python -m pip install tcparse
+  python -m pip install qcparse
   ```
 
-- Parse files into `AtomicResult` or `FailedOperation` objects with a single line of code.
+- Parse a file into a `SinglePointComputedProperties` object with a single line of code.
 
   ```python
-  from tcparse import parse
+  from qcparse import parse_computed_props
 
-  result = parse("/path/to/tc.out")
+  computed = parse_computed_props("/path/to/tc.out", "terachem")
   ```
 
-- If your `xyz` file no longer exists where `tc.out` specifies (the `XYZ coordinates` line), `parse` will raise a `FileNotFoundError`. You can pass `ignore_xyz=True` and `parse` will use a dummy hydrogen molecule instead. The correct values from `tc.out` will be parsed; however, `result.molecule` will be the dummy hydrogen.
+- The `computed` object will be a `SinglePointComputedProperties` object. Run `dir(computed)` inside a Python interpreter to see the various values you can access. A few prominent values are shown here as an example:
 
   ```python
-  from tcparse import parse
+  from qcparse import parse_computed_props
 
-  result = parse("/path/to/tc.out", ignore_xyz=True)
-  print(result) # Real results from tc.out
-  print(result.molecule) # Dummy hydrogen molecule
+  computed = parse_computed_props("/path/to/tc.out", "terachem")
+
+  computed.energy
+  computed.gradient # If a gradient calc
+  computed.hessian # If a hessian calc
+
+  computed.calcinfo_nmo # Number of molecular orbitals
   ```
 
-- The `result` object will be either an `AtomicResult` or `FailedOperation`. Run `dir(result)` inside a Python interpreter to see the various values you can access. A few prominent values are shown here as an example:
-
-  ```python
-  from tcparse import parse
-
-  result = parse("/path/to/tc.out")
-
-  if result.success:
-      # result is AtomicResult
-      result.driver # "energy", "gradient", or "hessian"
-      result.model # Method and basis
-      result.return_result # Core value from the computation. Will be either energy or grad/Hess matrix
-      result.properties # Collection of computed properties. Two shown below.
-      result.properties.return_energy # Available for all calcs
-      result.properties.return_gradient # Available for grad/Hess calcs
-      result.molecule # The molecule used for the computation
-      result.stdout # The full TeraChem stdout
-      result.provenance # Provenance data for the computation (TeraChem version)
-  else:
-      # result is FailedOperation
-      result.error # ComputeError object describing error
-      result.input_data # Basic data about the inputs supplied, does NOT include keywords
-      result.error.error_message # Parsed error message from TeraChem stdout
-      result.error.extras['stdout'] # Full TeraChem stdout
-  ```
-
-- Parsed results can be written to disk like this:
+- Parsed values can be written to disk like this:
 
   ```py
-  with open("myresult.json", "w") as f:
+  with open("computed.json", "w") as f:
       f.write(result.json())
   ```
 
 - And read from disk like this:
 
   ```py
-  from qcelemental.models import AtomicResult, FailedOperation
+  from qcio import SinglePointComputedProperties as SPProps
 
-  successful_result = AtomicResult.parse_file("myresult.json")
-  failed_result = FailedOperation.parse_file("myfailure.json")
+  computed = SPProps.open("myresult.json")
   ```
 
-- You can also run `tcparse` from the command line like this:
+- You can also run `qcparse` from the command line like this:
 
   ```sh
-  tcparse -h # Get help message for cli
+  qcparse -h # Get help message for cli
 
-  tcparse ./path/to/tc.out > myoutput.json # Parse TeraChem stdout to json
-
-  tcparse --ignore_xyz ./path/to/tc.out > myoutput.json # Ignore the XYZ file in the TeraChem stdout. Helpful in case the XYZ file is not longer available in the location specified in the file.
+  qcparse terachem ./path/to/tc.out > computed.json # Parse TeraChem stdout to json
   ```
 
 ## 🤩 Next Steps
 
-This package will be integrated into [QCEngine](https://github.com/MolSSI/QCEngine) soon. So if you like getting your TeraChem data in this format, you'll be able to drive TeraChem from pure python like this:
+This package is integrated into [qcop](https://github.com/coltonbh/qcop). This means you can use `qcop` to power your QC programs using standard input data structures in pure Python and get back standardized Python output objects.
 
 ```python
-from qcelemental.models import Molecule, AtomicInput
-from qcengine import compute
+from qcop import compute
+from qcio import Molecule, SinglePointInput
 
-molecule = Molecule.from_file("mymolecule.xyz")
-atomic_input = AtomicInput(
+molecule = Molecule.open("mymolecule.xyz")
+sp_input = SinglePointInput(
     molecule=molecule,
-    driver="gradient", # "energy" | "gradient" | "hessian"
-    model={"method": "b3lyp", "basis": "6-31gs"},
-    keywords={"restricted": True, "purify": "no"} # Keywords are optional
-    )
+    program_args={
+          "calc_type": "gradient", # "energy" | "gradient" | "hessian"
+          "model": {"method": "b3lyp", "basis": "6-31gs"},
+          "keywords": {"restricted": True, "purify": "no"} # Keywords are optional
+    })
 
-# result will be AtomicResult or FailedOperation
-result = compute(atomic_input, "terachem")
+# result will be SinglePointSuccessfulOutput or SinglePointFailedOutput
+result = compute(sp_input, "terachem")
 ```
 
 ## 💻 Contributing
 
-If there's data you'd like parsed from TeraChem output files, please open an issue in this repo explaining the data items you'd like parsed and include an example output file containing the data, like [this](https://github.com/mtzgroup/tcparse/issues/2).
+If there's data you'd like parsed fromI output files, please open an issue in this repo explaining the data items you'd like parsed and include an example output file containing the data, like [this](https://github.com/coltonbh/qcparse/issues/2).
 
-If you'd like to add a parser yourself see the docstring in `tcparse.parsers` for a primer and see the examples written in the module. Adding a parser for new data is quick and easy :)
+If you'd like to add a parser yourself see the docstring in `qcparse.parsers` for a primer and see the examples written in the module. Adding a parser for new data is quick and easy :)
