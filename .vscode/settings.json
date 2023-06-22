@@ -8,6 +8,8 @@
         "natoms",
         "nocuda",
         "qcel",
+        "qcio",
+        "qcparse",
         "tcout",
         "tcparse",
         "tcstdout",

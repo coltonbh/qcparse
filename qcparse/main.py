@@ -33,7 +33,7 @@ def parse(
     filepath: Union[str, Path],
     program: str,
     filetype: str,
-    parse_input_data: bool = False,
+    parse_input_data: bool = True,
 ) -> SinglePointOutput:
     """Parse a file using the parsers registered for the given program.
 
@@ -50,9 +50,8 @@ def parse(
         parse_input_data: If True, parse the input data as well as the output data.
     """
     filepath = Path(filepath)
-    # Each parser will add its results to this object. Each value can only be set once.
-    # This is to prevent parsers from overwriting each other's results.
-    # results_obj structured like SinglePointOutput but mutable
+    # Each parser will add its results to this object.
+    # TODO: Handle failed calculations
     results_obj = single_point_result_ns()
 
     # Get all the parsers for the program
@@ -65,7 +64,7 @@ def parse(
     except UnicodeDecodeError:
         # File is binary data
         pass
-    print(parsers)
+
     # Apply all parsers to the file content
     for parser_info in parsers:
         if parser_info.filetype == filetype:
@@ -84,7 +83,9 @@ def parse(
     if not parse_input_data:
         # Clear the input data
         results_dict["input_data"] = None
+    import pdb
 
+    pdb.set_trace()
     return SinglePointOutput(**results_dict)
 
 
