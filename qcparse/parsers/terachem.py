@@ -17,7 +17,31 @@ from enum import Enum
 from pathlib import Path
 from typing import List
 
-from .exceptions import MatchNotFoundError
+from qcparse.exceptions import MatchNotFoundError
+from qcparse.models import ImmutableNamespace
+
+from .decorators import parser
+
+__all__ = [
+    "parse_driver",
+    "parse_method",
+    "parse_basis",
+    "parse_version",
+    "parse_total_charge",
+    "parse_spin_multiplicity",
+    "parse_natoms",
+    "parse_nmo",
+    "parse_xyz_filepath",
+    "parse_energy",
+    "parse_gradient",
+    "parse_hessian",
+    "parse_failure_text",
+    "SupportedDrivers",
+]
+
+
+class SupportedFileTypes(str, Enum):
+    stdout = "stdout"
 
 
 class SupportedDrivers(str, Enum):
@@ -51,7 +75,8 @@ def _search(regex, string) -> re.Match:
     return match
 
 
-def parse_energy(string: str) -> float:
+@parser(filetype=SupportedFileTypes.stdout, must_succeed=True)
+def parse_energy(string: str, output_obj: ImmutableNamespace) -> float:
     """Parse the final energy from TeraChem stdout.
 
     NOTE:
@@ -59,9 +84,10 @@ def parse_energy(string: str) -> float:
             returns the first result
     """
     regex = r"FINAL ENERGY: (-?\d+(?:\.\d+)?)"
-    return float(_search(regex, string).group(1))
+    output_obj.computed.energy = float(_search(regex, string).group(1))
 
 
+@parser(filetype=SupportedFileTypes.stdout, must_succeed=True)
 def parse_driver(string: str) -> SupportedDrivers:
     """Parse the driver from TeraChem stdout."""
     drivers = (

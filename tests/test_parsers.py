@@ -2,8 +2,8 @@ from pathlib import Path
 
 import pytest
 
-from tcparse.exceptions import MatchNotFoundError
-from tcparse.parsers import (
+from qcparse.exceptions import MatchNotFoundError
+from qcparse.parsers import (
     SupportedDrivers,
     calculation_succeeded,
     parse_basis,

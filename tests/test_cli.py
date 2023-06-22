@@ -1,7 +1,7 @@
 import json
 import subprocess
 
-from tcparse.main import parse
+from qcparse.main import parse
 
 
 def test_cli(test_data_dir):

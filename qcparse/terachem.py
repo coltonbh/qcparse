@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Union
 
 from qcelemental.models import AtomicInput, AtomicResult, FailedOperation, Molecule
 
-from .helpers import hydrogen
+from .helpers import hydrogen_atom
 from .parsers import (
     SupportedDrivers,
     calculation_succeeded,
@@ -48,7 +48,7 @@ def parse(
 
     if ignore_xyz:
         # Use a placeholder hydrogen atom
-        molecule = hydrogen
+        molecule = hydrogen_atom
     else:
         # Load the actual xyz structure referenced in the stdout
         molecule = Molecule.from_file(outfile_path.parent / parse_xyz_filepath(tcout))

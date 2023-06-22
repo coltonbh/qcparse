@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "tcparse"
+name = "qcparse"
 version = "0.2.1"
 description = "A package for parsing TeraChem file outputs into structured MolSSI data objects."
 authors = ["Colton Hicks <github@coltonhicks.com>"]
@@ -8,7 +8,7 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.8.1"
-qcelemental = ">=0.25.1"
+qcio = { path = "../qcio", develop = true }
 
 
 [tool.poetry.group.dev.dependencies]
@@ -22,7 +22,7 @@ pytest-cov = "^4.0.0"
 autoflake = "^2.0.2"
 
 [tool.poetry.scripts]
-tcparse = "tcparse.cli:main"
+tcparse = "qcparse.cli:main"
 
 [build-system]
 requires = ["poetry-core"]
@@ -43,12 +43,7 @@ use_parentheses = true
 
 [tool.coverage.run]
 branch = true
-omit = [
-  "*/tests/*",
-  "*/migrations/*",
-  "*site-packages*",
-  "*__init__.py",
-]
+omit = ["*/tests/*", "*/migrations/*", "*site-packages*", "*__init__.py"]
 
 [tool.mypy]
 plugins = "pydantic.mypy"

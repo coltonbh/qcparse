@@ -1,8 +1,8 @@
 import pytest
 from qcelemental.models import AtomicResult, FailedOperation
 
-from tcparse import parse
-from tcparse.parsers import SupportedDrivers
+from qcparse import parse
+from qcparse.parsers import SupportedDrivers
 
 
 @pytest.mark.parametrize(
