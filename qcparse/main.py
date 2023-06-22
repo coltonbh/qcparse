@@ -1,30 +1,14 @@
 """Top level functions for the tcparse library"""
 
 from pathlib import Path
-from typing import Union
+from typing import Union, Optional, List
 
-from qcio import SinglePointOutput
+from qcio import SinglePointOutput, SinglePointInput, SinglePointFailure, Molecule
 
-# from .parsers import (
-#     SupportedDrivers,
-#     calculation_succeeded,
-#     parse_basis,
-#     parse_driver,
-#     parse_energy,
-#     parse_failure_text,
-#     parse_gradient,
-#     parse_hessian,
-#     parse_method,
-#     parse_natoms,
-#     parse_nmo,
-#     parse_spin_multiplicity,
-#     parse_total_charge,
-#     parse_version,
-#     parse_xyz_filepath,
-# )
+
 from .exceptions import MatchNotFoundError
 from .models import single_point_result_ns
-from .parsers import parser_registry
+from .parsers import registry, ParserSpec
 
 __all__ = ["parse"]
 
@@ -33,29 +17,37 @@ def parse(
     filepath: Union[str, Path],
     program: str,
     filetype: str,
-    parse_input_data: bool = True,
-) -> SinglePointOutput:
+    input_data: Optional[SinglePointInput] = None,
+) -> Union[SinglePointOutput, SinglePointFailure]:
     """Parse a file using the parsers registered for the given program.
 
     Args:
         filepath: Path to the file to parse.
         program: The QC program that generated the output file.
-            To see the available programs run
-            >>> from qcparse import parser_registry
-            >>> parser_registry.get_programs()
+            To see the available programs run:
+            >>> from qcparse import registry
+            >>> registry.supported_programs()
         filetype: The type of file to parse (e.g. 'stdout' for the log output).
             To see the available filetypes for a given program run
-            >>> from qcparse import parser_registry
-            >>> parser_registry.get_filetypes('program_name')
-        parse_input_data: If True, parse the input data as well as the output data.
+            >>> from qcparse import registry
+            >>> registry.supported_filetypes('program_name')
+        input_data: An optional SinglePointInput object containing the input data
+            for the calculation. This will be added to the SinglePointOutput object
+            returned by this function and no input data will be parsed from the file.
+
+
+    Returns:
+        SinglePointOutput or SinglePointFailure object encapsulating the parsed data.
     """
     filepath = Path(filepath)
     # Each parser will add its results to this object.
     # TODO: Handle failed calculations
-    results_obj = single_point_result_ns()
+    result_obj = single_point_result_ns()
 
-    # Get all the parsers for the program
-    parsers = parser_registry.get_parsers(program)
+    # Get all the parsers for the program and filetype
+    parsers: List[ParserSpec] = registry.get_parsers(
+        program, filetype=filetype, input_data=input_data is not None
+    )
 
     # Read the file contents
     file_content = filepath.read_bytes()
@@ -67,26 +59,26 @@ def parse(
 
     # Apply all parsers to the file content
     for parser_info in parsers:
-        if parser_info.filetype == filetype:
-            try:
-                # This will raise a MatchNotFound error if the parser can't find its data
-                parser_info.parser(file_content, results_obj)
-                print(f"Ran parser: {parser_info.parser.__name__}")
-            except MatchNotFoundError:
-                if parser_info.required:
-                    raise
-                else:
-                    # Parser didn't find anything, but it wasn't required
-                    pass
+        try:
+            # This will raise a MatchNotFound error if the parser can't find its data
+            parser_info.parser(file_content, result_obj)
+        except MatchNotFoundError:
+            if parser_info.required:
+                raise
+            else:
+                # Parser didn't find anything, but it wasn't required
+                pass
 
-    results_dict = results_obj.dict()
-    if not parse_input_data:
-        # Clear the input data
-        results_dict["input_data"] = None
-    import pdb
+    if input_data:
+        # Add the input data to the results object
+        result_obj.input_data = input_data
 
-    pdb.set_trace()
-    return SinglePointOutput(**results_dict)
+    # A hack for output files reference an xyz file, like TeraChem
+    elif relative_path := result_obj.extras.xyz_path:
+        # Load the xyz file referenced in the stdout
+
+        result_obj.input_data.molecule = Molecule.open(filepath.parent / relative_path)
+    return SinglePointOutput(**result_obj.dict())
 
 
 if __name__ == "__main__":

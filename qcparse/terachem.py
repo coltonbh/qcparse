@@ -7,7 +7,7 @@ from qcelemental.models import AtomicInput, AtomicResult, FailedOperation, Molec
 
 from .helpers import hydrogen_atom
 from .parsers import (
-    SupportedDrivers,
+    CalcType,
     calculation_succeeded,
     parse_basis,
     parse_driver,
@@ -21,7 +21,7 @@ from .parsers import (
     parse_spin_multiplicity,
     parse_total_charge,
     parse_version,
-    parse_xyz_filepath,
+    _parse_xyz_filepath,
 )
 
 __all__ = ["parse"]
@@ -51,7 +51,7 @@ def parse(
         molecule = hydrogen_atom
     else:
         # Load the actual xyz structure referenced in the stdout
-        molecule = Molecule.from_file(outfile_path.parent / parse_xyz_filepath(tcout))
+        molecule = Molecule.from_file(outfile_path.parent / _parse_xyz_filepath(tcout))
 
     # Values to parse whether calculation was a success or failure
     driver = parse_driver(tcout)  # returns SupportedDriver
@@ -74,10 +74,10 @@ def parse(
         properties["calcinfo_natom"] = parse_natoms(tcout)
         properties["calcinfo_nmo"] = parse_nmo(tcout)
 
-        if driver in (SupportedDrivers.gradient, SupportedDrivers.hessian):
+        if driver in (CalcType.gradient, CalcType.hessian):
             return_result = properties["return_gradient"] = parse_gradient(tcout)
 
-        if driver == SupportedDrivers.hessian:
+        if driver == CalcType.hessian:
             return_result = properties["return_hessian"] = parse_hessian(tcout)
 
         return AtomicResult(

@@ -48,14 +48,15 @@ class ImmutableNamespace(SimpleNamespace):
 
 def single_point_result_ns() -> ImmutableNamespace:
     """Create a namespace for a single point result."""
-    results_obj = ImmutableNamespace()
+    output_obj = ImmutableNamespace()
     # Input Objects
-    results_obj.input_data = ImmutableNamespace()
-    results_obj.input_data.molecule = ImmutableNamespace()
-    results_obj.input_data.program_args = ImmutableNamespace()
+    output_obj.input_data = ImmutableNamespace()
+    output_obj.input_data.program_args = ImmutableNamespace()
+    output_obj.input_data.program_args.model = ImmutableNamespace()
 
     # Output Objects
-    results_obj.computed = ImmutableNamespace()
-    results_obj.provenance = ImmutableNamespace()
+    output_obj.computed = ImmutableNamespace()
+    output_obj.provenance = ImmutableNamespace()
+    output_obj.extras = ImmutableNamespace()
 
-    return results_obj
+    return output_obj

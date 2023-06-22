@@ -1,21 +1,34 @@
 import importlib
 import inspect
 from functools import wraps
+from typing import List, Optional
 
-from .registry import parser_registry
+from qcio import Drivers
+
+from .registry import registry
 
 __all__ = ["parser"]
 
 
-def parser(filetype: str, must_succeed: bool = True):
+def parser(
+    filetype: str,
+    *,
+    required: bool = True,
+    input_data: bool = False,
+    only_drivers: Optional[List[Drivers]] = None,
+):
     """Decorator to register a function as a parser for program output filetype.
 
     Args:
-        filetype: The filetype to register the function as a parser for.
-        must_succeed: Whether the parser is required to be successful for the parsing
-            to be considered successful. If True and the parser fails a
-            MatchNotFoundError will be raised. If False and the parser fails the value
-            will be ignored.
+        filetype: The filetype the parser operates on.
+        required: If True and the parser fails a MatchNotFoundError will be raised.
+            If False and the parser fails the value will be ignored.
+        input_data: Whether the parser is for input data, such as method, basis, or a
+            molecular structure, instead of computed output data. If True the parser
+            will be not be called if a SinglePointInput object is passed as input_data
+            to the top-level parse function.
+        only_drivers: The drivers that the parser is for. If None the parser will be
+            registered for all drivers.
     """
 
     def decorator(func):
@@ -31,12 +44,19 @@ def parser(filetype: str, must_succeed: bool = True):
             raise ValueError(
                 f"Program '{program_name}' does not support the filetype '{filetype}' "
                 f"defined in the decorator around '{func.__name__}'. Ether add "
-                f"'{filetype}' to the SupportedFileTypes Enum in '{module}' or change "
+                f"'{filetype}' to the FileTypes Enum in '{module}' or change "
                 f"the parser wrapper to the correct filetype."
             )
 
         # Register the function in the global registry
-        parser_registry.register(program_name, filetype, must_succeed, func)
+        registry.register(
+            program_name,
+            filetype,
+            required,
+            func,
+            only_drivers,
+            input_data,
+        )
 
         @wraps(func)
         def wrapper(stdout: str):

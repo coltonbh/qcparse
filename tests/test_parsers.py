@@ -4,7 +4,7 @@ import pytest
 
 from qcparse.exceptions import MatchNotFoundError
 from qcparse.parsers import (
-    SupportedDrivers,
+    CalcType,
     calculation_succeeded,
     parse_basis,
     parse_driver,
@@ -18,7 +18,7 @@ from qcparse.parsers import (
     parse_spin_multiplicity,
     parse_total_charge,
     parse_version,
-    parse_xyz_filepath,
+    _parse_xyz_filepath,
 )
 
 from .data import gradients, hessians
@@ -58,9 +58,9 @@ def test_parse_energy_raises_exception():
 @pytest.mark.parametrize(
     "filename,driver",
     (
-        ("water.energy.out", SupportedDrivers.energy),
-        ("water.gradient.out", SupportedDrivers.gradient),
-        ("water.frequencies.out", SupportedDrivers.hessian),
+        ("water.energy.out", CalcType.energy),
+        ("water.gradient.out", CalcType.gradient),
+        ("water.frequencies.out", CalcType.hessian),
     ),
 )
 def test_parse_driver(test_data_dir, filename, driver):
@@ -84,7 +84,7 @@ def test_parse_driver_raises_exception():
     ),
 )
 def test_parse_xyz(string, path):
-    assert parse_xyz_filepath(string) == path
+    assert _parse_xyz_filepath(string) == path
 
 
 @pytest.mark.parametrize(

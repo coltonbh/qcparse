@@ -2,19 +2,19 @@ import pytest
 from qcelemental.models import AtomicResult, FailedOperation
 
 from qcparse import parse
-from qcparse.parsers import SupportedDrivers
+from qcparse.parsers import CalcType
 
 
 @pytest.mark.parametrize(
     "filename,instance,driver",
     (
-        ("water.energy.out", AtomicResult, SupportedDrivers.energy.value),
-        ("water.gradient.out", AtomicResult, SupportedDrivers.gradient.value),
-        ("water.frequencies.out", AtomicResult, SupportedDrivers.hessian.value),
-        ("caffeine.gradient.out", AtomicResult, SupportedDrivers.gradient.value),
-        ("caffeine.frequencies.out", AtomicResult, SupportedDrivers.hessian.value),
-        ("failure.basis.out", FailedOperation, SupportedDrivers.gradient.value),
-        ("failure.nocuda.out", FailedOperation, SupportedDrivers.gradient.value),
+        ("water.energy.out", AtomicResult, CalcType.energy.value),
+        ("water.gradient.out", AtomicResult, CalcType.gradient.value),
+        ("water.frequencies.out", AtomicResult, CalcType.hessian.value),
+        ("caffeine.gradient.out", AtomicResult, CalcType.gradient.value),
+        ("caffeine.frequencies.out", AtomicResult, CalcType.hessian.value),
+        ("failure.basis.out", FailedOperation, CalcType.gradient.value),
+        ("failure.nocuda.out", FailedOperation, CalcType.gradient.value),
     ),
 )
 def test_parse(test_data_dir, filename, instance, driver):
