@@ -3,27 +3,26 @@ from typing import Callable, Dict, List, Optional
 
 from pydantic import BaseModel
 
-from qcio import Drivers
+from qcio import CalcType
 
 
 class ParserSpec(BaseModel):
     """Information about a parser function.
 
     Attributes:
+        parser: The parser function.
         filetype: The filetype that the parser is for.
         required: Whether the parser is required to be successful for the parsing to
             be considered successful. If True and the parser fails a MatchNotFoundError
             will be raised. If False and the parser fails the value will be ignored.
-        parser: The parser function.
-        only_drivers: The drivers that the parser is for. If None the parser will be
-            registered for all drivers.
+        calc_types: The calculation types that the parser work on.
     """
 
+    parser: Callable
     filetype: str
     required: bool
-    parser: Callable
     input_data: bool = False
-    only_drivers: List[Drivers] = []
+    calc_types: List[CalcType]
 
 
 class ParserRegistry(BaseModel):
@@ -34,30 +33,31 @@ class ParserRegistry(BaseModel):
     def register(
         self,
         program: str,
+        parser: Callable,
         filetype: str,
         required: bool,
-        parser: Callable,
-        only_drivers: Optional[List[Drivers]] = None,
-        input_data: bool = False,
+        input_data: bool,
+        only: Optional[List[CalcType]],
     ) -> None:
         """Register a new parser function.
 
         Args:
             program: The program that the parser is for.
+            parser: The parser function.
             filetype: The filetype that the parser is for.
             required: Whether the parser is required to be successful for the parsing to
                 be considered successful. If True and the parser fails a MatchNotFoundError
                 will be raised. If False and the parser fails the value will be ignored.
-            parser: The parser function.
-            only_drivers: The drivers that the parser is for. If None the parser will be
-                registered for all drivers.
+            only: The calculation types that the parser is for. If None the
+                parser will be registered for all calculation types.
         """
         parser_info = ParserSpec(
+            parser=parser,
             filetype=filetype,
             required=required,
-            parser=parser,
-            only_drivers=only_drivers,
             input_data=input_data,
+            # If only not passed then register for all calculation types
+            calc_types=only or [CalcType.energy, CalcType.gradient, CalcType.hessian],
         )
         self.registry[program].append(parser_info)
 
@@ -65,32 +65,34 @@ class ParserRegistry(BaseModel):
         self,
         program: str,
         filetype: Optional[str] = None,
-        input_data: bool = True,
-        only_drivers: Optional[Drivers] = None,
+        output_only: bool = False,
+        calc_type: Optional[CalcType] = None,
     ) -> List[ParserSpec]:
         """Get all parser functions for a given program.
 
         Args:
             program: The program to get parsers for.
             filetype: If given only return parsers for this filetype.
-            input_data: If False only return parsers for output data. If True return
-                all parsers.
-            driver: If given only return parsers compatible with this driver.
+            output_only: If True return only parsers for output data.
+            calc_type: Filter parsers for a given calculation type.
 
         Returns:
-            List of ParserInfo objects.
+            List of ParserSpec objects.
 
         """
         try:
-            parsers = self.registry[program]
+            parsers: List[ParserSpec] = self.registry[program]
         except KeyError:
             raise KeyError(f"No parsers registered for program '{program}'.")
+
         if filetype:
             parsers = [p_spec for p_spec in parsers if p_spec.filetype == filetype]
-        if not input_data:  # Output data only
+
+        if output_only:
             parsers = [p_spec for p_spec in parsers if not p_spec.input_data]
-        if only_drivers:
-            parsers = [p_spec for p_spec in parsers if driver in p_spec.only_drivers]
+
+        if calc_type:
+            parsers = [p_spec for p_spec in parsers if calc_type in p_spec.calc_types]
         return parsers
 
     def supported_programs(self) -> List[str]:

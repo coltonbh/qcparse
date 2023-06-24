@@ -2,12 +2,18 @@
 
 from pathlib import Path
 from typing import Union, Optional, List
+from importlib import import_module
 
-from qcio import SinglePointOutput, SinglePointInput, SinglePointFailure, Molecule
+from qcio import (
+    SinglePointOutputSuccess,
+    SinglePointInput,
+    SinglePointOutputFailure,
+    Molecule,
+)
 
 
 from .exceptions import MatchNotFoundError
-from .models import single_point_result_ns
+from .models import single_point_data_collector
 from .parsers import registry, ParserSpec
 
 __all__ = ["parse"]
@@ -18,7 +24,7 @@ def parse(
     program: str,
     filetype: str,
     input_data: Optional[SinglePointInput] = None,
-) -> Union[SinglePointOutput, SinglePointFailure]:
+) -> Union[SinglePointOutputSuccess, SinglePointOutputFailure]:
     """Parse a file using the parsers registered for the given program.
 
     Args:
@@ -40,14 +46,6 @@ def parse(
         SinglePointOutput or SinglePointFailure object encapsulating the parsed data.
     """
     filepath = Path(filepath)
-    # Each parser will add its results to this object.
-    # TODO: Handle failed calculations
-    result_obj = single_point_result_ns()
-
-    # Get all the parsers for the program and filetype
-    parsers: List[ParserSpec] = registry.get_parsers(
-        program, filetype=filetype, input_data=input_data is not None
-    )
 
     # Read the file contents
     file_content = filepath.read_bytes()
@@ -57,11 +55,30 @@ def parse(
         # File is binary data
         pass
 
-    # Apply all parsers to the file content
+    # Get the calculation type if filetype is 'stdout'
+    if filetype == "stdout":
+        get_calc_type = import_module(f"qcparse.parsers.{program}").get_calc_type
+        calc_type = get_calc_type(file_content)
+    else:
+        calc_type = None
+
+    # Get all the parsers for the program and filetype
+    parsers: List[ParserSpec] = registry.get_parsers(
+        program,
+        filetype=filetype,
+        output_only=input_data is not None,
+        calc_type=calc_type,
+    )
+
+    # Parsers add its results to this object.
+    # TODO: Handle failed calculations
+    data_collector = single_point_data_collector()
+
+    # Apply parsers to the file content.
     for parser_info in parsers:
         try:
             # This will raise a MatchNotFound error if the parser can't find its data
-            parser_info.parser(file_content, result_obj)
+            parser_info.parser(file_content, data_collector)
         except MatchNotFoundError:
             if parser_info.required:
                 raise
@@ -71,18 +88,20 @@ def parse(
 
     if input_data:
         # Add the input data to the results object
-        result_obj.input_data = input_data
+        data_collector.input_data = input_data
 
-    # A hack for output files reference an xyz file, like TeraChem
-    elif relative_path := result_obj.extras.xyz_path:
-        # Load the xyz file referenced in the stdout
+    # Post processing
+    post_process = import_module(f"qcparse.parsers.{program}").post_process
+    post_process(data_collector)
 
-        result_obj.input_data.molecule = Molecule.open(filepath.parent / relative_path)
-    return SinglePointOutput(**result_obj.dict())
+    # Remove scratch from data_collector
+    del data_collector.scratch
+
+    return SinglePointOutput(**data_collector.dict())
 
 
 if __name__ == "__main__":
-    output = parse("./tests/data/water.energy.out", "terachem", "stdout")
+    output = parse("./tests/data/water.gradient.out", "terachem", "stdout")
     print(output)
 
 

@@ -7,7 +7,7 @@ from qcparse.parsers import (
     CalcType,
     calculation_succeeded,
     parse_basis,
-    parse_driver,
+    get_calc_type,
     parse_energy,
     parse_failure_text,
     parse_gradient,
@@ -66,12 +66,12 @@ def test_parse_energy_raises_exception():
 def test_parse_driver(test_data_dir, filename, driver):
     with open(test_data_dir / filename) as f:
         string = f.read()
-    assert parse_driver(string) == driver
+    assert get_calc_type(string) == driver
 
 
 def test_parse_driver_raises_exception():
     with pytest.raises(MatchNotFoundError):
-        parse_driver("No driver here")
+        get_calc_type("No driver here")
 
 
 @pytest.mark.parametrize(

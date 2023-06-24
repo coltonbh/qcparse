@@ -17,15 +17,15 @@ from enum import Enum
 from pathlib import Path
 from typing import List
 
-from qcio import Molecule, Drivers
+from qcio import Molecule, CalcType
 from qcparse.exceptions import MatchNotFoundError
-from qcparse.models import ImmutableNamespace
+from qcparse.models import ParsedDataCollector
 
 from .decorators import parser
 from .utils import hydrogen_atom, regex_search
 
 __all__ = [
-    "parse_driver",
+    "get_calc_type",
     "parse_method",
     "parse_basis",
     "parse_version",
@@ -42,20 +42,33 @@ __all__ = [
 ]
 
 
-class FileTypes(str, Enum):
+class FileType(str, Enum):
     stdout = "stdout"
 
 
-class Driver(str, Enum):
-    """The type of calculation that parser should be executed on."""
+def get_calc_type(string: str) -> CalcType:
+    """Parse the driver from TeraChem stdout."""
+    calc_types = (
+        (CalcType.energy, r"SINGLE POINT ENERGY CALCULATIONS"),
+        (CalcType.gradient, r"SINGLE POINT GRADIENT CALCULATIONS"),
+        (CalcType.hessian, r" FREQUENCY ANALYSIS "),
+    )
+    for calc_type, regex in calc_types:
+        match = re.search(regex, string)
+        if match:
+            return calc_type
+    raise MatchNotFoundError(regex, string)
 
-    energy = "energy"
-    gradient = "gradient"
-    hessian = "hessian"
+
+def post_process(output: ParsedDataCollector, filepath: Path, *args, **kwargs) -> None:
+    """Any post processing required after parsing is done here."""
+    # Load the actual xyz structure referenced in the stdout
+    molecule = Molecule.from_file(filepath.parent / output.extras.xyz_path)
+    output.extras.molecule = molecule
 
 
-@parser(filetype=FileTypes.stdout)
-def parse_energy(string: str, output: ImmutableNamespace) -> float:
+@parser(filetype=FileType.stdout)
+def parse_energy(string: str, output: ParsedDataCollector) -> float:
     """Parse the final energy from TeraChem stdout.
 
     NOTE:
@@ -66,25 +79,8 @@ def parse_energy(string: str, output: ImmutableNamespace) -> float:
     output.computed.energy = float(regex_search(regex, string).group(1))
 
 
-@parser(filetype=FileTypes.stdout)
-def parse_driver(string: str, output: ImmutableNamespace):
-    """Parse the driver from TeraChem stdout."""
-    drivers = (
-        (Drivers.energy, r"SINGLE POINT ENERGY CALCULATIONS"),
-        (Drivers.gradient, r"SINGLE POINT GRADIENT CALCULATIONS"),
-        (Drivers.hessian, r" FREQUENCY ANALYSIS "),
-    )
-    for driver, regex in drivers:
-        match = re.search(regex, string)
-        if match:
-            output.input_data.program_args.driver = driver
-            # Stop searching after the first match
-            return
-    raise MatchNotFoundError(regex, string)
-
-
-@parser(filetype=FileTypes.stdout)
-def parse_xyz_filepath(string: str, output: ImmutableNamespace) -> Path:
+@parser(filetype=FileType.stdout)
+def parse_xyz_filepath(string: str, output: ParsedDataCollector) -> Path:
     """Parse the path to the xyz file from TeraChem stdout.
 
     NOTE: This is a bit of a hack to handle the fact that TeraChem does not have the
@@ -94,37 +90,25 @@ def parse_xyz_filepath(string: str, output: ImmutableNamespace) -> Path:
     xyz file and parse the molecule.
     """
     regex = r"XYZ coordinates (.+)"
-    output.extras.xyz_path = Path(regex_search(regex, string).group(1))
+    output.scratch.xyz_path = Path(regex_search(regex, string).group(1))
 
 
-# # TODO: Think about how to handle path to xyz file
-# @parser(filetype=SupportedFileTypes.stdout, input_data=True)
-# def parse_molecule(string: str, output: ImmutableNamespace) -> Molecule:
-#     """Parse the molecule from TeraChem stdout.
-
-#     Raises:
-#         FileNotFoundError: If the xyz file is not found.
-#     """
-#     xyz_path = parse_xyz_filepath(string)
-#     output.input_data.molecule = Molecule.open(xyz_path)
-
-
-@parser(filetype=FileTypes.stdout, input_data=True)
-def parse_method(string: str, output: ImmutableNamespace) -> str:
+@parser(filetype=FileType.stdout, input_data=True)
+def parse_method(string: str, output: ParsedDataCollector) -> str:
     """Parse the method from TeraChem stdout."""
     regex = r"Method: (\S+)"
     output.input_data.program_args.model.method = regex_search(regex, string).group(1)
 
 
-@parser(filetype=FileTypes.stdout, input_data=True)
-def parse_basis(string: str, output: ImmutableNamespace) -> str:
+@parser(filetype=FileType.stdout, input_data=True)
+def parse_basis(string: str, output: ParsedDataCollector) -> str:
     """Parse the basis from TeraChem stdout."""
     regex = r"Using basis set: (\S+)"
     output.input_data.program_args.model.basis = regex_search(regex, string).group(1)
 
 
-@parser(filetype=FileTypes.stdout)
-def parse_version(string: str, output: ImmutableNamespace) -> str:
+@parser(filetype=FileType.stdout)
+def parse_version(string: str, output: ParsedDataCollector) -> str:
     """Parse TeraChem version from TeraChem stdout."""
     regex = r"TeraChem (v\S*)"
     output.provenance.program_version = regex_search(regex, string).group(1)
@@ -147,8 +131,8 @@ def calculation_succeeded(string: str) -> bool:
 
 
 # TODO: Handle Failures
-@parser(filetype=FileTypes.stdout)
-def parse_failure_text(string: str, output: ImmutableNamespace) -> str:
+@parser(filetype=FileType.stdout)
+def parse_failure_text(string: str, output: ParsedDataCollector) -> str:
     """Parse failure message in TeraChem stdout."""
     for regex in FAILURE_REGEXPS:
         match = re.search(regex, string)
@@ -161,11 +145,14 @@ def parse_failure_text(string: str, output: ImmutableNamespace) -> str:
     )
 
 
-@parser(filetype=FileTypes.stdout)
-def parse_gradient(string: str, output: ImmutableNamespace) -> List[List[float]]:
+@parser(filetype=FileType.stdout, only=[CalcType.gradient, CalcType.hessian])
+def parse_gradient(string: str, output: ParsedDataCollector) -> List[List[float]]:
     """Parse gradient from TeraChem stdout."""
     # This will match all floats after the dE/dX dE/dY dE/dZ header and stop at the
     # terminating ---- line
+    import pdb
+
+    pdb.set_trace()
     regex = r"(?<=dE\/dX\s{12}dE\/dY\s{12}dE\/dZ\n)[\d\.\-\s]+(?=\n-{2,})"
     gradient_string = regex_search(regex, string).group()
 
@@ -176,11 +163,12 @@ def parse_gradient(string: str, output: ImmutableNamespace) -> List[List[float]]
     gradient = []
     for i in range(0, len(values), 3):
         gradient.append(values[i : i + 3])
-    return gradient
+
+    output.computed.gradient = gradient
 
 
-@parser(filetype=FileTypes.stdout)
-def parse_hessian(string: str, output: ImmutableNamespace) -> List[List[float]]:
+@parser(filetype=FileType.stdout, only=[CalcType.hessian])
+def parse_hessian(string: str, output: ParsedDataCollector) -> List[List[float]]:
     """Parse Hessian Matrix from TeraChem stdout
 
     Notes:
@@ -205,34 +193,43 @@ def parse_hessian(string: str, output: ImmutableNamespace) -> List[List[float]]:
             row.extend([float(val) for val in match.split()])
         hessian.append(row)
         count += 1
+
     if not hessian:
         raise MatchNotFoundError(regex, string)
+
+    # Assert we have created a square Hessian matrix
+    for i, row in enumerate(hessian):
+        assert len(row) == len(
+            hessian
+        ), "We must have missed some floats. Hessian should be a square matrix. Only "
+        f"recovered {len(row)} of {len(hessian)} floats for row {i}."
+
     output.computed.hessian = hessian
 
 
-@parser(filetype=FileTypes.stdout)
-def parse_natoms(string: str, output: ImmutableNamespace) -> int:
+@parser(filetype=FileType.stdout)
+def parse_natoms(string: str, output: ParsedDataCollector) -> int:
     """Parse number of atoms value from TeraChem stdout"""
     regex = r"Total atoms:\s*(\d+)"
     output.computed.calcinfo_natom = int(regex_search(regex, string).group(1))
 
 
-@parser(filetype=FileTypes.stdout)
-def parse_nmo(string: str, output: ImmutableNamespace) -> int:
+@parser(filetype=FileType.stdout)
+def parse_nmo(string: str, output: ParsedDataCollector) -> int:
     """Parse the number of molecular orbitals TeraChem stdout"""
     regex = r"Total orbitals:\s*(\d+)"
     output.computed.calcinfo_nmo = int(regex_search(regex, string).group(1))
 
 
 # @parser(filetype=SupportedFileTypes.stdout)
-# def parse_total_charge(string: str, output: ImmutableNamespace) -> float:
+# def parse_total_charge(string: str, output: ParsedDataCollector) -> float:
 #     """Parse total charge from TeraChem stdout"""
 #     regex = r"Total charge:\s*(\d+)"
 #     output.input_data.molecule.charge = float(regex_search(regex, string).group(1))
 
 
 # @parser(filetype=SupportedFileTypes.stdout)
-# def parse_spin_multiplicity(string: str, output: ImmutableNamespace) -> int:
+# def parse_spin_multiplicity(string: str, output: ParsedDataCollector) -> int:
 #     """Parse spin multiplicity from TeraChem stdout"""
 #     regex = r"Spin multiplicity:\s*(\d+)"
 #     output.input_data.molecule.multiplicity = int(regex_search(regex, string).group(1))

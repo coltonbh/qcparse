@@ -3,7 +3,7 @@ import inspect
 from functools import wraps
 from typing import List, Optional
 
-from qcio import Drivers
+from qcio import CalcType
 
 from .registry import registry
 
@@ -15,7 +15,7 @@ def parser(
     *,
     required: bool = True,
     input_data: bool = False,
-    only_drivers: Optional[List[Drivers]] = None,
+    only: Optional[List[CalcType]] = None,
 ):
     """Decorator to register a function as a parser for program output filetype.
 
@@ -27,8 +27,8 @@ def parser(
             molecular structure, instead of computed output data. If True the parser
             will be not be called if a SinglePointInput object is passed as input_data
             to the top-level parse function.
-        only_drivers: The drivers that the parser is for. If None the parser will be
-            registered for all drivers.
+        only: Only register the parser on these CalcTypes. If None the parser will be
+            registered for all CalcTypes.
     """
 
     def decorator(func):
@@ -37,7 +37,7 @@ def parser(
         program_name = module.split(".")[-1]
 
         # Dynamically import the relevant Enum module
-        supported_file_types = importlib.import_module(f"{module}").SupportedFileTypes
+        supported_file_types = importlib.import_module(f"{module}").FileType
 
         # Check if filetype is a member of the relevant Enum
         if filetype not in supported_file_types.__members__:
@@ -51,11 +51,11 @@ def parser(
         # Register the function in the global registry
         registry.register(
             program_name,
+            func,
             filetype,
             required,
-            func,
-            only_drivers,
             input_data,
+            only,
         )
 
         @wraps(func)
