@@ -20,7 +20,7 @@ __all__ = ["parse"]
 def parse(
     data_or_path: Union[str, bytes, Path],
     program: str,
-    filetype: str,
+    filetype: str = "stdout",
     input_data: Optional[SinglePointInput] = None,
 ) -> Union[SinglePointSuccessfulOutput, SinglePointFailedOutput]:
     """Parse a file using the parsers registered for the given program.
@@ -52,8 +52,18 @@ def parse(
 
     # Get the calculation type if filetype is 'stdout'
     if filetype == "stdout":
-        get_calc_type = import_module(f"qcparse.parsers.{program}").get_calc_type
-        calc_type = get_calc_type(file_content)
+        parse_calc_type = import_module(f"qcparse.parsers.{program}").parse_calc_type
+        calc_type = parse_calc_type(file_content)
+        data_collector.input_data.program_args.calc_type = calc_type
+
+        # Determine if calculation succeeded
+        parse_calculation_succeeded = import_module(
+            f"qcparse.parsers.{program}"
+        ).calculation_succeeded
+        if not parse_calculation_succeeded(file_content):
+            # TODO: Handle failed calculations
+            pass
+
         data_collector.stdout = file_content
     else:
         calc_type = None
@@ -98,5 +108,6 @@ def parse(
 
 
 if __name__ == "__main__":
-    output = parse("./tests/data/water.gradient.out", "terachem", "stdout")
+    # output = parse("./tests/data/water.gradient.out", "terachem", "stdout")
+    output = parse("./tests/data/basis.failure.out", "terachem", "stdout")
     print(output)

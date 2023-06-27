@@ -27,7 +27,7 @@ from typing import Union, Optional, List
 from qcio import SinglePointInput
 
 __all__ = [
-    "get_calc_type",
+    "parse_calc_type",
     "calculation_succeeded",
     "parse_method",
     "parse_basis",
@@ -38,7 +38,6 @@ __all__ = [
     "parse_energy",
     "parse_gradient",
     "parse_hessian",
-    "parse_failure_text",
     "CalcType",
 ]
 
@@ -47,8 +46,8 @@ class FileType(str, Enum):
     stdout = "stdout"
 
 
-def get_calc_type(string: str) -> CalcType:
-    """Parse the driver from TeraChem stdout."""
+def parse_calc_type(string: str) -> CalcType:
+    """Parse the calc_type from TeraChem stdout."""
     calc_types = (
         (CalcType.energy, r"SINGLE POINT ENERGY CALCULATIONS"),
         (CalcType.gradient, r"SINGLE POINT GRADIENT CALCULATIONS"),
@@ -62,7 +61,7 @@ def get_calc_type(string: str) -> CalcType:
 
 
 def post_process(
-    output: ParsedDataCollector,
+    data_collector: ParsedDataCollector,
     file_content: Union[str, bytes],
     filetype: str,
     filepath: Optional[Path] = None,
@@ -80,14 +79,14 @@ def post_process(
         relative_xyz_path = parse_xyz_filepath(file_content)
         raw_molecule = Molecule.open(tcin_filepath.parent / relative_xyz_path)
         mol_dict = raw_molecule.dict()
-        mol_dict["charge"] = parse_total_charge(file_content)
-        mol_dict["multiplicity"] = parse_spin_multiplicity(file_content)
+        mol_dict["charge"] = parse_molecule_charge(file_content)
+        mol_dict["multiplicity"] = parse_molecule_spin_multiplicity(file_content)
 
-        output.input_data.molecule = Molecule(**mol_dict)
+        data_collector.input_data.molecule = Molecule(**mol_dict)
 
 
 @parser(filetype=FileType.stdout)
-def parse_energy(string: str, output: ParsedDataCollector):
+def parse_energy(string: str, data_collector: ParsedDataCollector):
     """Parse the final energy from TeraChem stdout.
 
     NOTE:
@@ -95,21 +94,25 @@ def parse_energy(string: str, output: ParsedDataCollector):
             returns the first result
     """
     regex = r"FINAL ENERGY: (-?\d+(?:\.\d+)?)"
-    output.computed.energy = float(regex_search(regex, string).group(1))
+    data_collector.computed.energy = float(regex_search(regex, string).group(1))
 
 
 @parser(filetype=FileType.stdout, input_data=True)
-def parse_method(string: str, output: ParsedDataCollector):
+def parse_method(string: str, data_collector: ParsedDataCollector):
     """Parse the method from TeraChem stdout."""
     regex = r"Method: (\S+)"
-    output.input_data.program_args.model.method = regex_search(regex, string).group(1)
+    data_collector.input_data.program_args.model.method = regex_search(
+        regex, string
+    ).group(1)
 
 
 @parser(filetype=FileType.stdout, input_data=True)
-def parse_basis(string: str, output: ParsedDataCollector):
+def parse_basis(string: str, data_collector: ParsedDataCollector):
     """Parse the basis from TeraChem stdout."""
     regex = r"Using basis set: (\S+)"
-    output.input_data.program_args.model.basis = regex_search(regex, string).group(1)
+    data_collector.input_data.program_args.model.basis = regex_search(
+        regex, string
+    ).group(1)
 
 
 def _parse_version(string: str) -> str:
@@ -119,9 +122,9 @@ def _parse_version(string: str) -> str:
 
 
 @parser(filetype=FileType.stdout)
-def parse_version(string: str, output: ParsedDataCollector):
+def parse_version(string: str, data_collector: ParsedDataCollector):
     """Parse TeraChem version from TeraChem stdout."""
-    output.provenance.program_version = _parse_version(string)
+    data_collector.provenance.program_version = _parse_version(string)
 
 
 # Factored out for use in calculation_succeeded and parse_failure_text
@@ -136,27 +139,13 @@ def calculation_succeeded(string: str) -> bool:
     """Determine from TeraChem stdout if a calculation competed successfully."""
     for regex in FAILURE_REGEXPS:
         if re.search(regex, string):
+            # If any match for a failure regex is found, the calculation failed
             return False
     return True
 
 
-# TODO: Handle Failures
-@parser(filetype=FileType.stdout)
-def parse_failure_text(string: str, output: ParsedDataCollector) -> str:
-    """Parse failure message in TeraChem stdout."""
-    for regex in FAILURE_REGEXPS:
-        match = re.search(regex, string)
-        if match:
-            return match.group()
-
-    return (
-        "Could not extract failure message from TeraChem stdout. Look at the last "
-        "lines of stdout for clues."
-    )
-
-
 @parser(filetype=FileType.stdout, only=[CalcType.gradient, CalcType.hessian])
-def parse_gradient(string: str, output: ParsedDataCollector):
+def parse_gradient(string: str, data_collector: ParsedDataCollector):
     """Parse gradient from TeraChem stdout."""
     # This will match all floats after the dE/dX dE/dY dE/dZ header and stop at the
     # terminating ---- line
@@ -171,11 +160,11 @@ def parse_gradient(string: str, output: ParsedDataCollector):
     for i in range(0, len(values), 3):
         gradient.append(values[i : i + 3])
 
-    output.computed.gradient = gradient
+    data_collector.computed.gradient = gradient
 
 
 @parser(filetype=FileType.stdout, only=[CalcType.hessian])
-def parse_hessian(string: str, output: ParsedDataCollector):
+def parse_hessian(string: str, data_collector: ParsedDataCollector):
     """Parse Hessian Matrix from TeraChem stdout
 
     Notes:
@@ -211,21 +200,21 @@ def parse_hessian(string: str, output: ParsedDataCollector):
         ), "We must have missed some floats. Hessian should be a square matrix. Only "
         f"recovered {len(row)} of {len(hessian)} floats for row {i}."
 
-    output.computed.hessian = hessian
+    data_collector.computed.hessian = hessian
 
 
 @parser(filetype=FileType.stdout)
-def parse_natoms(string: str, output: ParsedDataCollector):
+def parse_natoms(string: str, data_collector: ParsedDataCollector):
     """Parse number of atoms value from TeraChem stdout"""
     regex = r"Total atoms:\s*(\d+)"
-    output.computed.calcinfo_natom = int(regex_search(regex, string).group(1))
+    data_collector.computed.calcinfo_natoms = int(regex_search(regex, string).group(1))
 
 
 @parser(filetype=FileType.stdout)
-def parse_nmo(string: str, output: ParsedDataCollector):
+def parse_nmo(string: str, data_collector: ParsedDataCollector):
     """Parse the number of molecular orbitals TeraChem stdout"""
     regex = r"Total orbitals:\s*(\d+)"
-    output.computed.calcinfo_nmo = int(regex_search(regex, string).group(1))
+    data_collector.computed.calcinfo_nmo = int(regex_search(regex, string).group(1))
 
 
 def parse_xyz_filepath(string: str) -> Path:
@@ -241,13 +230,13 @@ def parse_xyz_filepath(string: str) -> Path:
     return Path(regex_search(regex, string).group(1))
 
 
-def parse_total_charge(string: str) -> int:
+def parse_molecule_charge(string: str) -> int:
     """Parse Molecule charge from TeraChem stdout"""
     regex = r"Total charge:\s*(\d+)"
     return int(regex_search(regex, string).group(1))
 
 
-def parse_spin_multiplicity(string: str) -> int:
+def parse_molecule_spin_multiplicity(string: str) -> int:
     """Parse Molecule spin multiplicity from TeraChem stdout"""
     regex = r"Spin multiplicity:\s*(\d+)"
     return int(regex_search(regex, string).group(1))

@@ -58,11 +58,6 @@ def parser(
             only,
         )
 
-        @wraps(func)
-        def wrapper(stdout: str):
-            # Call the original function
-            return func(stdout)
-
-        return wrapper
+        return func
 
     return decorator

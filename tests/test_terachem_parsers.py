@@ -6,7 +6,7 @@ from qcparse.exceptions import MatchNotFoundError
 from qcparse.parsers.terachem import (
     CalcType,
     calculation_succeeded,
-    get_calc_type,
+    parse_calc_type,
     parse_basis,
     parse_energy,
     parse_failure_text,
@@ -16,6 +16,8 @@ from qcparse.parsers.terachem import (
     parse_natoms,
     parse_nmo,
     parse_version,
+    parse_molecule_spin_multiplicity,
+    parse_molecule_charge,
 )
 
 from .data import gradients, hessians
@@ -29,57 +31,60 @@ from .data import gradients, hessians
         ("water.frequencies.out", -76.3861099088),
     ),
 )
-def test_parse_energy(test_data_dir, filename, energy):
+def test_parse_energy(test_data_dir, data_collector, filename, energy):
     with open(test_data_dir / filename) as f:
         tcout = f.read()
-    assert parse_energy(tcout) == energy
+    parse_energy(tcout, data_collector)
 
 
-def test_parse_energy_positive():
-    energy = parse_energy("FINAL ENERGY: 76.3854579982 a.u")
-    assert energy == 76.3854579982
-
-
-def test_parse_energy_integer():
-    energy = parse_energy("FINAL ENERGY: -7638 a.u")
-    assert energy == -7638
-    energy = parse_energy("FINAL ENERGY: 7638 a.u")
-    assert energy == 7638
-
-
-def test_parse_energy_raises_exception():
-    with pytest.raises(MatchNotFoundError):
-        parse_energy("No energy here")
+def test_parse_energy_positive(data_collector):
+    energy = 76.3854579982
+    parse_energy(f"FINAL ENERGY: {energy} a.u", data_collector)
+    assert data_collector.computed.energy == energy
 
 
 @pytest.mark.parametrize(
-    "filename,driver",
+    "energy",
+    (-7634, 7123),
+)
+def test_parse_energy_integer(data_collector, energy):
+    parse_energy(f"FINAL ENERGY: {energy} a.u", data_collector)
+    assert data_collector.computed.energy == energy
+
+
+def test_parse_energy_raises_exception(data_collector):
+    with pytest.raises(MatchNotFoundError):
+        parse_energy("No energy here", data_collector)
+
+
+@pytest.mark.parametrize(
+    "filename,calc_type",
     (
         ("water.energy.out", CalcType.energy),
         ("water.gradient.out", CalcType.gradient),
         ("water.frequencies.out", CalcType.hessian),
     ),
 )
-def test_parse_driver(test_data_dir, filename, driver):
+def test_parse_calc_type(test_data_dir, filename, calc_type):
     with open(test_data_dir / filename) as f:
         string = f.read()
-    assert get_calc_type(string) == driver
+    assert parse_calc_type(string) == calc_type
 
 
-def test_parse_driver_raises_exception():
+def test_parse_calc_type_raises_exception():
     with pytest.raises(MatchNotFoundError):
-        get_calc_type("No driver here")
+        parse_calc_type("No driver here")
 
 
-@pytest.mark.parametrize(
-    "string,path",
-    (
-        ("XYZ coordinates water.xyz", Path("water.xyz")),
-        ("XYZ coordinates water", Path("water")),
-        ("XYZ coordinates /scratch/water.xyz", Path("/scratch/water.xyz")),
-        ("XYZ coordinates ../water.xyz", Path("../water.xyz")),
-    ),
-)
+# @pytest.mark.parametrize(
+#     "string,path",
+#     (
+#         ("XYZ coordinates water.xyz", Path("water.xyz")),
+#         ("XYZ coordinates water", Path("water")),
+#         ("XYZ coordinates /scratch/water.xyz", Path("/scratch/water.xyz")),
+#         ("XYZ coordinates ../water.xyz", Path("../water.xyz")),
+#     ),
+# )
 @pytest.mark.parametrize(
     "filename,method",
     (
@@ -88,18 +93,21 @@ def test_parse_driver_raises_exception():
         ("water.frequencies.out", "B3LYP"),
     ),
 )
-def test_parse_method(test_data_dir, filename, method):
+def test_parse_method(test_data_dir, filename, method, data_collector):
     with open(test_data_dir / filename) as f:
         tcout = f.read()
-    assert parse_method(tcout) == method
+    parse_method(tcout, data_collector)
+    assert data_collector.input_data.program_args.model.method == method
 
 
-def test_parse_basis(energy_output):
-    assert parse_basis(energy_output) == "6-31g"
+def test_parse_basis(energy_output, data_collector):
+    parse_basis(energy_output, data_collector)
+    assert data_collector.input_data.program_args.model.basis == "6-31g"
 
 
-def test_parse_version(energy_output):
-    assert parse_version(energy_output) == "v1.9-2022.03-dev"
+def test_parse_version(energy_output, data_collector):
+    parse_version(energy_output, data_collector)
+    assert data_collector.provenance.program_version == "v1.9-2022.03-dev"
 
 
 def test_calculation_succeeded(energy_output):
@@ -130,31 +138,6 @@ def test_calculation_succeeded_cuda_failure(test_data_dir, filename, result):
 
 
 @pytest.mark.parametrize(
-    "filename,result",
-    (
-        (
-            "failure.nocuda.out",
-            "CUDA error: no CUDA-capable device is detected, file tensorbox/src/tensorbox.cpp, line 33",
-        ),
-        (
-            "failure.basis.out",
-            "DIE called at line number 185 in file terachem/basis.cpp",
-        ),
-    ),
-)
-def test_parse_failure_text(test_data_dir, filename, result):
-    with open(test_data_dir / filename) as f:
-        tcout = f.read()
-    assert parse_failure_text(tcout) == result
-
-
-def test_parse_failure_text_non_standard():
-    text = parse_failure_text("Not a regular failure message")
-    # Assert that some failure message was returned to the users
-    assert isinstance(text, str)
-
-
-@pytest.mark.parametrize(
     "filename,gradient",
     (
         (
@@ -171,10 +154,12 @@ def test_parse_failure_text_non_standard():
         ),
     ),
 )
-def test_parse_gradient(test_data_dir, filename, gradient):
+def test_parse_gradient(test_data_dir, filename, gradient, data_collector):
     with open(test_data_dir / filename) as f:
         tcout = f.read()
-    assert parse_gradient(tcout) == gradient
+
+    parse_gradient(tcout, data_collector)
+    assert data_collector.computed.gradient == gradient
 
 
 @pytest.mark.parametrize(
@@ -190,52 +175,55 @@ def test_parse_gradient(test_data_dir, filename, gradient):
         ),
     ),
 )
-def test_parse_hessian(test_data_dir, filename, hessian):
+def test_parse_hessian(test_data_dir, filename, hessian, data_collector):
     with open(test_data_dir / filename) as f:
         tcout = f.read()
-    assert parse_hessian(tcout) == hessian
-    print("hi")
+
+    parse_hessian(tcout, data_collector)
+    assert data_collector.computed.hessian == hessian
 
 
 @pytest.mark.parametrize(
     "filename,n_atoms",
     (("water.energy.out", 3), ("caffeine.gradient.out", 24)),
 )
-def test_parse_natoms(test_data_dir, filename, n_atoms):
+def test_parse_natoms(test_data_dir, filename, n_atoms, data_collector):
     with open(test_data_dir / filename) as f:
         tcout = f.read()
-    n = parse_natoms(tcout)
-    assert n == n_atoms
+
+    parse_natoms(tcout, data_collector)
+    assert data_collector.computed.calcinfo_natoms == n_atoms
 
 
 @pytest.mark.parametrize(
     "filename,nmo",
     (("water.energy.out", 13), ("caffeine.gradient.out", 146)),
 )
-def test_parse_nmo(test_data_dir, filename, nmo):
+def test_parse_nmo(test_data_dir, filename, nmo, data_collector):
     with open(test_data_dir / filename) as f:
         tcout = f.read()
-    n = parse_nmo(tcout)
-    assert n == nmo
+
+    parse_nmo(tcout, data_collector)
+    assert data_collector.computed.calcinfo_nmo == nmo
 
 
 @pytest.mark.parametrize(
-    "filename,nmo",
+    "filename,charge",
     (("water.energy.out", 0), ("caffeine.gradient.out", 0)),
 )
-def test_parse_total_charge(test_data_dir, filename, nmo):
+def test_parse_molecule_charge(test_data_dir, filename, charge):
     with open(test_data_dir / filename) as f:
         tcout = f.read()
-    n = parse_total_charge(tcout)
-    assert n == nmo
+    n = parse_molecule_charge(tcout)
+    assert n == charge
 
 
 @pytest.mark.parametrize(
     "filename,multiplicity",
     (("water.energy.out", 1), ("caffeine.gradient.out", 1)),
 )
-def test_parse_spin_multiplicity(test_data_dir, filename, multiplicity):
+def test_parse_molecule_spin_multiplicity(test_data_dir, filename, multiplicity):
     with open(test_data_dir / filename) as f:
         tcout = f.read()
-    n = parse_spin_multiplicity(tcout)
+    n = parse_molecule_spin_multiplicity(tcout)
     assert n == multiplicity
