@@ -46,13 +46,14 @@ class ParsedDataCollector(SimpleNamespace):
             return self
 
 
-def single_point_data_collector() -> ParsedDataCollector:
+def single_point_data_collector(collect_inputs: bool = True) -> ParsedDataCollector:
     """Create a namespace for a single point result."""
     output_obj = ParsedDataCollector()
-    # Input Objects
-    output_obj.input_data = ParsedDataCollector()
-    output_obj.input_data.program_args = ParsedDataCollector()
-    output_obj.input_data.program_args.model = ParsedDataCollector()
+    if collect_inputs:
+        # Input Objects
+        output_obj.input_data = ParsedDataCollector()
+        output_obj.input_data.program_args = ParsedDataCollector()
+        output_obj.input_data.program_args.model = ParsedDataCollector()
 
     # Output Objects
     output_obj.computed = ParsedDataCollector()

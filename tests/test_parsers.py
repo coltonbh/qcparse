@@ -5,9 +5,10 @@ import pytest
 from qcparse.exceptions import MatchNotFoundError
 from qcparse.parsers import (
     CalcType,
+    _parse_xyz_filepath,
     calculation_succeeded,
-    parse_basis,
     get_calc_type,
+    parse_basis,
     parse_energy,
     parse_failure_text,
     parse_gradient,
@@ -18,7 +19,6 @@ from qcparse.parsers import (
     parse_spin_multiplicity,
     parse_total_charge,
     parse_version,
-    _parse_xyz_filepath,
 )
 
 from .data import gradients, hessians

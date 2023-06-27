@@ -2,7 +2,6 @@ from collections import defaultdict
 from typing import Callable, Dict, List, Optional
 
 from pydantic import BaseModel
-
 from qcio import CalcType
 
 
@@ -65,7 +64,7 @@ class ParserRegistry(BaseModel):
         self,
         program: str,
         filetype: Optional[str] = None,
-        output_only: bool = False,
+        collect_inputs: bool = True,
         calc_type: Optional[CalcType] = None,
     ) -> List[ParserSpec]:
         """Get all parser functions for a given program.
@@ -73,7 +72,7 @@ class ParserRegistry(BaseModel):
         Args:
             program: The program to get parsers for.
             filetype: If given only return parsers for this filetype.
-            output_only: If True return only parsers for output data.
+            collect_inputs: If False return only parsers for output data.
             calc_type: Filter parsers for a given calculation type.
 
         Returns:
@@ -88,7 +87,7 @@ class ParserRegistry(BaseModel):
         if filetype:
             parsers = [p_spec for p_spec in parsers if p_spec.filetype == filetype]
 
-        if output_only:
+        if not collect_inputs:
             parsers = [p_spec for p_spec in parsers if not p_spec.input_data]
 
         if calc_type:

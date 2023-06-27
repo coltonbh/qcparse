@@ -1,34 +1,29 @@
 """Top level functions for the tcparse library"""
 
-from pathlib import Path
-from typing import Union, Optional, List
 from importlib import import_module
+from pathlib import Path
+from typing import List, Optional, Union
 
-from qcio import (
-    SinglePointOutputSuccess,
-    SinglePointInput,
-    SinglePointOutputFailure,
-    Molecule,
-)
-
+from qcio import SinglePointFailedOutput, SinglePointInput, SinglePointSuccessfulOutput
 
 from .exceptions import MatchNotFoundError
 from .models import single_point_data_collector
-from .parsers import registry, ParserSpec
+from .parsers import ParserSpec, registry
+from .utils import get_file_content
 
 __all__ = ["parse"]
 
 
 def parse(
-    filepath: Union[str, Path],
+    data_or_path: Union[str, bytes, Path],
     program: str,
     filetype: str,
     input_data: Optional[SinglePointInput] = None,
-) -> Union[SinglePointOutputSuccess, SinglePointOutputFailure]:
+) -> Union[SinglePointSuccessfulOutput, SinglePointFailedOutput]:
     """Parse a file using the parsers registered for the given program.
 
     Args:
-        filepath: Path to the file to parse.
+        data_or_path: File contents (str or bytes) or path to the file to parse.
         program: The QC program that generated the output file.
             To see the available programs run:
             >>> from qcparse import registry
@@ -45,15 +40,7 @@ def parse(
     Returns:
         SinglePointOutput or SinglePointFailure object encapsulating the parsed data.
     """
-    filepath = Path(filepath)
-
-    # Read the file contents
-    file_content = filepath.read_bytes()
-    try:
-        file_content = file_content.decode("utf-8")
-    except UnicodeDecodeError:
-        # File is binary data
-        pass
+    file_content = get_file_content(data_or_path)
 
     # Get the calculation type if filetype is 'stdout'
     if filetype == "stdout":
@@ -62,17 +49,18 @@ def parse(
     else:
         calc_type = None
 
+    collect_inputs = input_data is None
     # Get all the parsers for the program and filetype
     parsers: List[ParserSpec] = registry.get_parsers(
         program,
         filetype=filetype,
-        output_only=input_data is not None,
+        collect_inputs=collect_inputs,
         calc_type=calc_type,
     )
 
     # Parsers add its results to this object.
     # TODO: Handle failed calculations
-    data_collector = single_point_data_collector()
+    data_collector = single_point_data_collector(collect_inputs)
 
     # Apply parsers to the file content.
     for parser_info in parsers:
@@ -86,18 +74,16 @@ def parse(
                 # Parser didn't find anything, but it wasn't required
                 pass
 
+    data_collector.provenance.program = program
+
     if input_data:
         # Add the input data to the results object
         data_collector.input_data = input_data
 
-    # Post processing
-    post_process = import_module(f"qcparse.parsers.{program}").post_process
-    post_process(data_collector)
-
-    # Remove scratch from data_collector
+    # Remove scratch data
     del data_collector.scratch
 
-    return SinglePointOutput(**data_collector.dict())
+    return SinglePointSuccessfulOutput(**data_collector.dict())
 
 
 if __name__ == "__main__":

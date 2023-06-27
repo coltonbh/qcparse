@@ -15,14 +15,14 @@ possible.
 import re
 from enum import Enum
 from pathlib import Path
-from typing import List
 
-from qcio import Molecule, CalcType
+from qcio import CalcType, Molecule
+
 from qcparse.exceptions import MatchNotFoundError
 from qcparse.models import ParsedDataCollector
 
 from .decorators import parser
-from .utils import hydrogen_atom, regex_search
+from .utils import regex_search
 
 __all__ = [
     "get_calc_type",
@@ -31,8 +31,8 @@ __all__ = [
     "parse_version",
     # "parse_total_charge",
     # "parse_spin_multiplicity",
-    "parse_natoms",
-    "parse_nmo",
+    # "parse_natoms",
+    # "parse_nmo",
     "parse_xyz_filepath",
     "parse_energy",
     "parse_gradient",
@@ -60,7 +60,7 @@ def get_calc_type(string: str) -> CalcType:
     raise MatchNotFoundError(regex, string)
 
 
-def post_process(output: ParsedDataCollector, filepath: Path, *args, **kwargs) -> None:
+def post_process(output: ParsedDataCollector, filepath: Path, *args, **kwargs):
     """Any post processing required after parsing is done here."""
     # Load the actual xyz structure referenced in the stdout
     molecule = Molecule.from_file(filepath.parent / output.extras.xyz_path)
@@ -68,7 +68,7 @@ def post_process(output: ParsedDataCollector, filepath: Path, *args, **kwargs) -
 
 
 @parser(filetype=FileType.stdout)
-def parse_energy(string: str, output: ParsedDataCollector) -> float:
+def parse_energy(string: str, output: ParsedDataCollector):
     """Parse the final energy from TeraChem stdout.
 
     NOTE:
@@ -80,7 +80,7 @@ def parse_energy(string: str, output: ParsedDataCollector) -> float:
 
 
 @parser(filetype=FileType.stdout)
-def parse_xyz_filepath(string: str, output: ParsedDataCollector) -> Path:
+def parse_xyz_filepath(string: str, output: ParsedDataCollector):
     """Parse the path to the xyz file from TeraChem stdout.
 
     NOTE: This is a bit of a hack to handle the fact that TeraChem does not have the
@@ -94,24 +94,29 @@ def parse_xyz_filepath(string: str, output: ParsedDataCollector) -> Path:
 
 
 @parser(filetype=FileType.stdout, input_data=True)
-def parse_method(string: str, output: ParsedDataCollector) -> str:
+def parse_method(string: str, output: ParsedDataCollector):
     """Parse the method from TeraChem stdout."""
     regex = r"Method: (\S+)"
     output.input_data.program_args.model.method = regex_search(regex, string).group(1)
 
 
 @parser(filetype=FileType.stdout, input_data=True)
-def parse_basis(string: str, output: ParsedDataCollector) -> str:
+def parse_basis(string: str, output: ParsedDataCollector):
     """Parse the basis from TeraChem stdout."""
     regex = r"Using basis set: (\S+)"
     output.input_data.program_args.model.basis = regex_search(regex, string).group(1)
 
 
-@parser(filetype=FileType.stdout)
-def parse_version(string: str, output: ParsedDataCollector) -> str:
+def _parse_version(string: str) -> str:
     """Parse TeraChem version from TeraChem stdout."""
     regex = r"TeraChem (v\S*)"
-    output.provenance.program_version = regex_search(regex, string).group(1)
+    return regex_search(regex, string).group(1)
+
+
+@parser(filetype=FileType.stdout)
+def parse_version(string: str, output: ParsedDataCollector):
+    """Parse TeraChem version from TeraChem stdout."""
+    output.provenance.program_version = _parse_version(string)
 
 
 # Factored out for use in calculation_succeeded and parse_failure_text
@@ -146,13 +151,10 @@ def parse_failure_text(string: str, output: ParsedDataCollector) -> str:
 
 
 @parser(filetype=FileType.stdout, only=[CalcType.gradient, CalcType.hessian])
-def parse_gradient(string: str, output: ParsedDataCollector) -> List[List[float]]:
+def parse_gradient(string: str, output: ParsedDataCollector):
     """Parse gradient from TeraChem stdout."""
     # This will match all floats after the dE/dX dE/dY dE/dZ header and stop at the
     # terminating ---- line
-    import pdb
-
-    pdb.set_trace()
     regex = r"(?<=dE\/dX\s{12}dE\/dY\s{12}dE\/dZ\n)[\d\.\-\s]+(?=\n-{2,})"
     gradient_string = regex_search(regex, string).group()
 
@@ -168,7 +170,7 @@ def parse_gradient(string: str, output: ParsedDataCollector) -> List[List[float]
 
 
 @parser(filetype=FileType.stdout, only=[CalcType.hessian])
-def parse_hessian(string: str, output: ParsedDataCollector) -> List[List[float]]:
+def parse_hessian(string: str, output: ParsedDataCollector):
     """Parse Hessian Matrix from TeraChem stdout
 
     Notes:
@@ -207,18 +209,18 @@ def parse_hessian(string: str, output: ParsedDataCollector) -> List[List[float]]
     output.computed.hessian = hessian
 
 
-@parser(filetype=FileType.stdout)
-def parse_natoms(string: str, output: ParsedDataCollector) -> int:
-    """Parse number of atoms value from TeraChem stdout"""
-    regex = r"Total atoms:\s*(\d+)"
-    output.computed.calcinfo_natom = int(regex_search(regex, string).group(1))
+# @parser(filetype=FileType.stdout)
+# def parse_natoms(string: str, output: ParsedDataCollector):
+#     """Parse number of atoms value from TeraChem stdout"""
+#     regex = r"Total atoms:\s*(\d+)"
+#     output.computed.calcinfo_natom = int(regex_search(regex, string).group(1))
 
 
-@parser(filetype=FileType.stdout)
-def parse_nmo(string: str, output: ParsedDataCollector) -> int:
-    """Parse the number of molecular orbitals TeraChem stdout"""
-    regex = r"Total orbitals:\s*(\d+)"
-    output.computed.calcinfo_nmo = int(regex_search(regex, string).group(1))
+# @parser(filetype=FileType.stdout)
+# def parse_nmo(string: str, output: ParsedDataCollector):
+#     """Parse the number of molecular orbitals TeraChem stdout"""
+#     regex = r"Total orbitals:\s*(\d+)"
+#     output.computed.calcinfo_nmo = int(regex_search(regex, string).group(1))
 
 
 # @parser(filetype=SupportedFileTypes.stdout)
