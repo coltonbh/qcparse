@@ -3,9 +3,8 @@ from pathlib import Path
 import pytest
 
 from qcparse.exceptions import MatchNotFoundError
-from qcparse.parsers import (
+from qcparse.parsers.terachem import (
     CalcType,
-    _parse_xyz_filepath,
     calculation_succeeded,
     get_calc_type,
     parse_basis,
@@ -16,8 +15,6 @@ from qcparse.parsers import (
     parse_method,
     parse_natoms,
     parse_nmo,
-    parse_spin_multiplicity,
-    parse_total_charge,
     parse_version,
 )
 
@@ -83,10 +80,6 @@ def test_parse_driver_raises_exception():
         ("XYZ coordinates ../water.xyz", Path("../water.xyz")),
     ),
 )
-def test_parse_xyz(string, path):
-    assert _parse_xyz_filepath(string) == path
-
-
 @pytest.mark.parametrize(
     "filename,method",
     (

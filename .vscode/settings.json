@@ -10,6 +10,7 @@
         "qcel",
         "qcio",
         "qcparse",
+        "tcin",
         "tcout",
         "tcparse",
         "tcstdout",
