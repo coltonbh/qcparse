@@ -34,3 +34,9 @@ def parse_some_data(string: str, output: ParsedDataCollector):
 ```
 
 5. That's it! The developer just has to focus on writing sin
+
+## Publishing Checklist
+
+- Update `CHANGELOG.md`
+- Bump version in `pyproject.toml`
+- Tag commit with a version and GitHub Actions will publish it to pypi if tag is on `master` branch.
