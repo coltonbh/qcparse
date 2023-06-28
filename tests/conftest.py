@@ -2,6 +2,8 @@ from pathlib import Path
 
 import pytest
 
+from qcparse.models import single_point_data_collector
+
 
 @pytest.fixture(scope="session")
 def test_data_dir():
@@ -13,3 +15,8 @@ def test_data_dir():
 def energy_output(test_data_dir):
     with open(test_data_dir / "water.energy.out") as f:
         return f.read()
+
+
+@pytest.fixture(scope="function")
+def data_collector():
+    return single_point_data_collector(collect_inputs=True)
