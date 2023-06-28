@@ -12,7 +12,7 @@ def test_data_dir():
 
 
 @pytest.fixture(scope="session")
-def energy_output(test_data_dir):
+def terachem_energy_stdout(test_data_dir):
     with open(test_data_dir / "water.energy.out") as f:
         return f.read()
 
