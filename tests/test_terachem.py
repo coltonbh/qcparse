@@ -9,6 +9,7 @@ from qcparse.parsers.terachem import (
     parse_basis,
     parse_calc_type,
     parse_energy,
+    parse_git_commit,
     parse_gradient,
     parse_hessian,
     parse_method,
@@ -105,23 +106,26 @@ def test_parse_method(test_data_dir, filename, method, data_collector):
     assert data_collector.input_data.program_args.model.method == method
 
 
-def test_parse_basis(energy_output, data_collector):
-    parse_basis(energy_output, data_collector)
+def test_parse_basis(terachem_energy_stdout, data_collector):
+    parse_basis(terachem_energy_stdout, data_collector)
     assert data_collector.input_data.program_args.model.basis == "6-31g"
 
 
-def test_parse_version(energy_output, data_collector):
-    parse_version(energy_output, data_collector)
-    assert data_collector.provenance.program_version == "v1.9-2022.03-dev"
+def test_parse_version(terachem_energy_stdout, data_collector):
+    parse_version(terachem_energy_stdout, data_collector)
+    assert (
+        data_collector.provenance.program_version
+        == "v1.9-2022.03-dev [4daa16dd21e78d64be5415f7663c3d7c2785203c]"
+    )
 
 
-def test_parse_working_dir(energy_output, data_collector):
-    parse_working_directory(energy_output, data_collector)
+def test_parse_working_dir(terachem_energy_stdout, data_collector):
+    parse_working_directory(terachem_energy_stdout, data_collector)
     assert data_collector.provenance.working_dir == "./scr.water"
 
 
-def test_calculation_succeeded(energy_output):
-    assert calculation_succeeded(energy_output) is True
+def test_calculation_succeeded(terachem_energy_stdout):
+    assert calculation_succeeded(terachem_energy_stdout) is True
     assert (
         calculation_succeeded(
             """
@@ -237,3 +241,11 @@ def test_parse_molecule_spin_multiplicity(test_data_dir, filename, multiplicity)
         tcout = f.read()
     n = parse_molecule_spin_multiplicity(tcout)
     assert n == multiplicity
+
+
+def test_parse_git_commit(terachem_energy_stdout):
+    git_commit = parse_git_commit(terachem_energy_stdout)
+    assert (
+        git_commit
+        == "4daa16dd21e78d64be5415f7663c3d7c2785203c"  # pragma: allowlist secret
+    )

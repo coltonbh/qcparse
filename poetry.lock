@@ -567,7 +567,7 @@ testing = ["fields", "hunter", "process-tests", "pytest-xdist", "six", "virtuale
 name = "pyyaml"
 version = "6.0"
 description = "YAML parser and emitter for Python"
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=3.6"
 files = [
@@ -615,19 +615,21 @@ files = [
 
 [[package]]
 name = "qcio"
-version = "0.1.0"
+version = "0.2.0"
 description = "Beautiful and user friendly data structures for quantum chemistry."
 category = "main"
 optional = false
 python-versions = ">=3.8,<4.0"
 files = [
-    {file = "qcio-0.1.0-py3-none-any.whl", hash = "sha256:15b4ee0a9330107d350a575ca9a9d2890c04b5ab2f399860b8a41ea4a007ff1c"},
-    {file = "qcio-0.1.0.tar.gz", hash = "sha256:be236c9496069726b564a1872cff417fd9e7760074b32020150fe7d9662c3e04"},
+    {file = "qcio-0.2.0-py3-none-any.whl", hash = "sha256:bd85ddddb3d4711652207e311ff935d85f25a9c684336f10c5db3a11e60b83bb"},
+    {file = "qcio-0.2.0.tar.gz", hash = "sha256:683687462b97e3ecf82d5c1d6885f6bc0a33e158fee46ef4fcaa8dacf8151671"},
 ]
 
 [package.dependencies]
 numpy = ">=1.20"
-pydantic = ">=1.10.7,<2.0.0"
+pydantic = ">=1.7.4,<1.8 || >1.8,<1.8.1 || >1.8.1,<2.0.0"
+pyyaml = ">=6.0,<7.0"
+toml = ">=0.10.2,<0.11.0"
 
 [[package]]
 name = "ruff"
@@ -674,6 +676,18 @@ testing = ["build[virtualenv]", "filelock (>=3.4.0)", "flake8-2020", "ini2toml[l
 testing-integration = ["build[virtualenv]", "filelock (>=3.4.0)", "jaraco.envs (>=2.2)", "jaraco.path (>=3.2.0)", "pytest", "pytest-enabler", "pytest-xdist", "tomli", "virtualenv (>=13.0.0)", "wheel"]
 
 [[package]]
+name = "toml"
+version = "0.10.2"
+description = "Python Library for Tom's Obvious, Minimal Language"
+category = "main"
+optional = false
+python-versions = ">=2.6, !=3.0.*, !=3.1.*, !=3.2.*"
+files = [
+    {file = "toml-0.10.2-py2.py3-none-any.whl", hash = "sha256:806143ae5bfb6a3c6e736a764057db0e6a0e05e338b5630894a5f779cabb4f9b"},
+    {file = "toml-0.10.2.tar.gz", hash = "sha256:b3bda1d108d5dd99f4a20d24d9c348e91c4db7ab1b749200bded2f839ccbe68f"},
+]
+
+[[package]]
 name = "tomli"
 version = "2.0.1"
 description = "A lil' TOML parser"
@@ -687,14 +701,14 @@ files = [
 
 [[package]]
 name = "typing-extensions"
-version = "4.6.3"
+version = "4.7.0"
 description = "Backported and Experimental Type Hints for Python 3.7+"
 category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "typing_extensions-4.6.3-py3-none-any.whl", hash = "sha256:88a4153d8505aabbb4e13aacb7c486c2b4a33ca3b3f807914a9b4c844c471c26"},
-    {file = "typing_extensions-4.6.3.tar.gz", hash = "sha256:d91d5919357fe7f681a9f2b5b4cb2a5f1ef0a1e9f59c4d8ff0d3491e05c0ffd5"},
+    {file = "typing_extensions-4.7.0-py3-none-any.whl", hash = "sha256:5d8c9dac95c27d20df12fb1d97b9793ab8b2af8a3a525e68c80e21060c161771"},
+    {file = "typing_extensions-4.7.0.tar.gz", hash = "sha256:935ccf31549830cda708b42289d44b6f74084d616a00be651601a4f968e77c82"},
 ]
 
 [[package]]
@@ -721,4 +735,4 @@ test = ["covdefaults (>=2.3)", "coverage (>=7.2.7)", "coverage-enable-subprocess
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.8.1"
-content-hash = "7d0ad7026ded053484677f00a54a57e4b32e2b5c2eebfb4f8d5d16280bdd6d3f"
+content-hash = "3f6888dda759be7840f30c8c2eb77582fd856c710a78630e80822a6226c73324"

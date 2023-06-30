@@ -106,10 +106,24 @@ def parse_basis(string: str, data_collector: ParsedDataCollector):
     ).group(1)
 
 
-def parse_version_string(string: str) -> str:
+def parse_git_commit(string: str) -> str:
+    """Parse TeraChem git commit from TeraChem stdout."""
+    regex = r"Git Version: (\S*)"
+    return regex_search(regex, string).group(1)
+
+
+def parse_terachem_version(string: str) -> str:
     """Parse TeraChem version from TeraChem stdout."""
     regex = r"TeraChem (v\S*)"
     return regex_search(regex, string).group(1)
+
+
+def parse_version_string(string: str) -> str:
+    """Parse version string plus git commit from TeraChem stdout.
+
+    Matches format of 'terachem --version' on command line.
+    """
+    return f"{parse_terachem_version(string)} [{parse_git_commit(string)}]"
 
 
 @parser(filetype=FileType.stdout)
