@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "qcparse"
-version = "0.3.1"
-description = "A package for parsing TeraChem file outputs into structured MolSSI data objects."
+version = "0.3.2"
+description = "A package for parsing Quantum Chemistry program file outputs into structured qcio data objects."
 authors = ["Colton Hicks <github@coltonhicks.com>"]
 license = "MIT"
 readme = "README.md"
