@@ -4,7 +4,7 @@ from importlib import metadata
 __version__ = metadata.version(__name__)
 
 
-from .main import parse, parse_computed_props  # noqa: F401
+from .main import parse, parse_results  # noqa: F401
 from .registry import registry  # noqa: F401
 
-__all__ = ["parse", "parse_computed_props", "registry"]
+__all__ = ["parse", "parse_results", "registry"]
