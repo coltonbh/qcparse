@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [unreleased]
 
+## [0.4.0]
+
 ### Changed
 
 - Updated to used `qcio>=0.3.0` flattened models and the `SinglePointResults`object.
@@ -58,7 +60,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Can return either `AtomicResult` or `FailedOperation` objects depending on whether calculation succeeded or failed.
 - Tests for all parsers and the main `parse` function.
 
-[unreleased]: https://github.com/coltonbh/qcparse/compare/0.3.2...HEAD
+[unreleased]: https://github.com/coltonbh/qcparse/compare/0.4.0...HEAD
+[0.4.0]: https://github.com/coltonbh/qcparse/releases/tag/0.4.0
 [0.3.2]: https://github.com/coltonbh/qcparse/releases/tag/0.3.2
 [0.3.1]: https://github.com/coltonbh/qcparse/releases/tag/0.3.1
 [0.3.0]: https://github.com/coltonbh/qcparse/releases/tag/0.3.0
