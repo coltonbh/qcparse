@@ -2,7 +2,7 @@ import argparse
 import json
 from pathlib import Path
 
-from .main import parse_computed_props
+from .main import parse_results
 
 
 def main():
@@ -18,9 +18,7 @@ def main():
 
     args = parser.parse_args()
 
-    computed_props = parse_computed_props(
-        Path(args.filepath), args.program, args.filetype
-    )
+    computed_props = parse_results(Path(args.filepath), args.program, args.filetype)
     # Hacking in pretty print since probably preferred for most users
     # Can update to result.json(indent=4) when this PR accepted
     # https://github.com/MolSSI/QCElemental/pull/307

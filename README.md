@@ -11,7 +11,7 @@ A library for parsing Quantum Chemistry output files into structured data object
 
 ## ☝️ NOTE
 
-This package was originally designed to run as a standalone parser to generate `SinglePointSuccessfulOutput` and `SinglePointFailedOutput` objects parsing all input and provenance data in addition to computed output data; however, once [qcop](https://github.com/coltonbh/qcop) was built to power quantum chemistry programs the only parsing needed was for the simpler `SinglePointComputedProperties` values. There are still remnants of the original `parse` function in the repo and I've left them for now in case I find a use for the general purpose parsing.
+This package was originally designed to run as a standalone parser to generate `SinglePointOutput` and `ProgramFailure` objects parsing all input and provenance data in addition to computed output data; however, once [qcop](https://github.com/coltonbh/qcop) was built to power quantum chemistry programs the only parsing needed was for the simpler `SinglePointResults` values. There are still remnants of the original `parse` function in the repo and I've left them for now in case I find a use for the general purpose parsing.
 
 ## ✨ Basic Usage
 
@@ -21,41 +21,41 @@ This package was originally designed to run as a standalone parser to generate `
   python -m pip install qcparse
   ```
 
-- Parse a file into a `SinglePointComputedProperties` object with a single line of code.
+- Parse a file into a `SinglePointResults` object with a single line of code.
 
   ```python
-  from qcparse import parse_computed_props
+  from qcparse import parse_results
 
-  computed = parse_computed_props("/path/to/tc.out", "terachem")
+  results = parse_results("/path/to/tc.out", "terachem")
   ```
 
-- The `computed` object will be a `SinglePointComputedProperties` object. Run `dir(computed)` inside a Python interpreter to see the various values you can access. A few prominent values are shown here as an example:
+- The `results` object will be a `SinglePointResults` object. Run `dir(results)` inside a Python interpreter to see the various values you can access. A few prominent values are shown here as an example:
 
   ```python
-  from qcparse import parse_computed_props
+  from qcparse import parse_results
 
-  computed = parse_computed_props("/path/to/tc.out", "terachem")
+  results = parse_results("/path/to/tc.out", "terachem")
 
-  computed.energy
-  computed.gradient # If a gradient calc
-  computed.hessian # If a hessian calc
+  results.energy
+  results.gradient # If a gradient calc
+  results.hessian # If a hessian calc
 
-  computed.calcinfo_nmo # Number of molecular orbitals
+  results.calcinfo_nmo # Number of molecular orbitals
   ```
 
 - Parsed values can be written to disk like this:
 
   ```py
-  with open("computed.json", "w") as f:
+  with open("results.json", "w") as f:
       f.write(result.json())
   ```
 
 - And read from disk like this:
 
   ```py
-  from qcio import SinglePointComputedProperties as SPProps
+  from qcio import SinglePointResults
 
-  computed = SPProps.open("myresult.json")
+  results = SinglePointResults.open("results.json")
   ```
 
 - You can also run `qcparse` from the command line like this:
@@ -63,29 +63,8 @@ This package was originally designed to run as a standalone parser to generate `
   ```sh
   qcparse -h # Get help message for cli
 
-  qcparse terachem ./path/to/tc.out > computed.json # Parse TeraChem stdout to json
+  qcparse terachem ./path/to/tc.out > results.json # Parse TeraChem stdout to json
   ```
-
-## 🤩 Next Steps
-
-This package is integrated into [qcop](https://github.com/coltonbh/qcop). This means you can use `qcop` to power your QC programs using standard input data structures in pure Python and get back standardized Python output objects.
-
-```python
-from qcop import compute
-from qcio import Molecule, SinglePointInput
-
-molecule = Molecule.open("mymolecule.xyz")
-sp_input = SinglePointInput(
-    molecule=molecule,
-    program_args={
-          "calc_type": "gradient", # "energy" | "gradient" | "hessian"
-          "model": {"method": "b3lyp", "basis": "6-31gs"},
-          "keywords": {"restricted": True, "purify": "no"} # Keywords are optional
-    })
-
-# result will be SinglePointSuccessfulOutput or SinglePointFailedOutput
-result = compute(sp_input, "terachem")
-```
 
 ## 💻 Contributing
 

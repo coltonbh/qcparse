@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [unreleased]
 
+### Changed
+
+- Updated to used `qcio>=0.3.0` flattened models and the `SinglePointResults`object.
+
 ## [0.3.1]
 
 ### Fixed

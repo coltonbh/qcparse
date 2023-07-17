@@ -1,43 +1,43 @@
 import pytest
-from qcio import SinglePointFailedOutput, SinglePointSuccessfulOutput, SPCalcType
+from qcio import CalcType, ProgramFailure, SinglePointOutput
 
 from qcparse import parse
 
 
 @pytest.mark.skip
 @pytest.mark.parametrize(
-    "filename,return_type,calc_type",
+    "filename,return_type,calctype",
     (
-        ("water.energy.out", SinglePointSuccessfulOutput, SPCalcType.energy.value),
-        ("water.gradient.out", SinglePointSuccessfulOutput, SPCalcType.gradient.value),
+        ("water.energy.out", SinglePointOutput, CalcType.energy.value),
+        ("water.gradient.out", SinglePointOutput, CalcType.gradient.value),
         (
             "water.frequencies.out",
-            SinglePointSuccessfulOutput,
-            SPCalcType.hessian.value,
+            SinglePointOutput,
+            CalcType.hessian.value,
         ),
         (
             "caffeine.gradient.out",
-            SinglePointSuccessfulOutput,
-            SPCalcType.gradient.value,
+            SinglePointOutput,
+            CalcType.gradient.value,
         ),
         (
             "caffeine.frequencies.out",
-            SinglePointSuccessfulOutput,
-            SPCalcType.hessian.value,
+            SinglePointOutput,
+            CalcType.hessian.value,
         ),
-        ("failure.basis.out", SinglePointFailedOutput, SPCalcType.gradient.value),
-        ("failure.nocuda.out", SinglePointFailedOutput, SPCalcType.gradient.value),
+        ("failure.basis.out", ProgramFailure, CalcType.gradient.value),
+        ("failure.nocuda.out", ProgramFailure, CalcType.gradient.value),
     ),
 )
-def test_parse(test_data_dir, filename, return_type, calc_type, data_collector):
+def test_parse(test_data_dir, filename, return_type, calctype, data_collector):
     """Test that the parser returns the correct type of output object"""
 
     data_collector = parse(test_data_dir / filename, "terachem", "stdout")
     assert isinstance(data_collector, return_type)
 
-    assert data_collector.input_data.program_args.calc_type == calc_type
+    assert data_collector.input_data.calctype == calctype
 
-    if isinstance(data_collector, SinglePointFailedOutput):
+    if isinstance(data_collector, ProgramFailure):
         # Guarantee stdout included
         assert isinstance(data_collector.error.extras["stdout"], str)
 
@@ -54,7 +54,7 @@ def test_parse(test_data_dir, filename, return_type, calc_type, data_collector):
 def test_parse_ignore_xyz(test_data_dir, filename, driver):
     # This tests that qcel still does correct validation on the gradient and
     output = parse(test_data_dir / filename, ignore_xyz=True)
-    assert isinstance(output, SinglePointSuccessfulOutput)
+    assert isinstance(output, SinglePointOutput)
     assert output.driver == driver
     # Using a hydrogen atoms as dummy
     assert output.molecule.symbols[0] == "H"

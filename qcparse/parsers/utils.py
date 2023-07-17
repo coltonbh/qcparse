@@ -3,7 +3,7 @@ import inspect
 import re
 from typing import List, Optional
 
-from qcio import SPCalcType
+from qcio import CalcType
 
 from qcparse.exceptions import MatchNotFoundError
 from qcparse.registry import registry
@@ -14,7 +14,7 @@ def parser(
     *,
     required: bool = True,
     input_data: bool = False,
-    only: Optional[List[SPCalcType]] = None,
+    only: Optional[List[CalcType]] = None,
 ):
     """Decorator to register a function as a parser for program output filetype.
 
@@ -26,8 +26,8 @@ def parser(
             molecular structure, instead of computed output data. If True the parser
             will be not be called if a SinglePointInput object is passed as input_data
             to the top-level parse function.
-        only: Only register the parser on these SPCalcTypes. If None the parser will be
-            registered for all SPCalcTypes.
+        only: Only register the parser on these CalcTypes. If None the parser will be
+            registered for all CalcTypes.
     """
 
     def decorator(func):
