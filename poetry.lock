@@ -612,14 +612,14 @@ files = [
 
 [[package]]
 name = "qcio"
-version = "0.3.0"
+version = "0.4.0"
 description = "Beautiful and user friendly data structures for quantum chemistry."
 category = "main"
 optional = false
 python-versions = ">=3.8,<4.0"
 files = [
-    {file = "qcio-0.3.0-py3-none-any.whl", hash = "sha256:f031d2ae3121a48b331440ded042b08e24110e96828f9c3df03a26a8a1506889"},
-    {file = "qcio-0.3.0.tar.gz", hash = "sha256:940cf4525eb4c52aabb0f34845394fe2bd4cee578342847d7c765a7c67b23152"},
+    {file = "qcio-0.4.0-py3-none-any.whl", hash = "sha256:704012c840345191644ecfc03e2aa0fa57b0ed382a3d20834980279c0e02cf63"},
+    {file = "qcio-0.4.0.tar.gz", hash = "sha256:498c81bbbb3ecb365941d337a35d814a5348167823501a6fd2c0f76840189fe0"},
 ]
 
 [package.dependencies]
@@ -733,4 +733,4 @@ test = ["covdefaults (>=2.3)", "coverage (>=7.2.7)", "coverage-enable-subprocess
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.8.1"
-content-hash = "19ca7148b25d2637af370c3119013d9716fdb7a8df17c38c9267fdd9aea72f30"
+content-hash = "bbf694d189c44413920067dfd2d6b068dbe97be3266c67412b09c273867b8e54"
