@@ -6,31 +6,37 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [unreleased]
 
-## [0.5.0]
+## [0.5.1] - 2023-09-19
+
+### Changed
+
+- Dropped Python dependency from `^3.8.1` to `^3.8`. Can't remember what older dependency required `3.8.1` but it's not needed anymore.
+
+## [0.5.0] - 2023-08-31
 
 ### Changed
 
 - Updated `pydantic` from `v1` -> `v2`.
 
-## [0.4.1]
+## [0.4.1] - 2023-07-19
 
 ### Changed
 
 - Updated `qcio` from `0.3.0` -> `0.4.0`.
 
-## [0.4.0]
+## [0.4.0] - 2023-07-17
 
 ### Changed
 
 - Updated to used `qcio>=0.3.0` flattened models and the `SinglePointResults`object.
 
-## [0.3.1]
+## [0.3.2] - 2023-06-29
 
 ### Fixed
 
 - Updated package description in pyproject.toml from TeraChem specific parsing and MolSSI to all QC packages and qcio.
 
-## [0.3.1]
+## [0.3.1] - 2023-06-29
 
 ### Added
 
@@ -40,20 +46,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 - `qcio` `>=0.1.0` -> `>=0.2.0`
 
-## [0.3.0]
+## [0.3.0] - 2023-06-28
 
 ### Changed
 
 - Dropped support for `QCSchema` models and changed to [qcio](https://github.com/coltonbh/qcio) data models.
 - `parse` function now raises `NotImplementedError` and the default use case is to use `parse_computed_prop` instead and ignore inputs and provenance data. This is the minimum spec since QC programs can be powered using structured inputs and [qcop](https://github.com/coltonbh/qcop). I may go back to parsing entire `SinglePointSuccess/FailedOutput` objects if use cases arise.
 
-## [0.2.1]
+## [0.2.1] - 2023-03-25
 
 ### Changed
 
 - Generalized `CUDA error:` regex to catch all CUDA errors.
 
-## [0.2.0]
+## [0.2.0] - 2023-03-24
 
 ### Added
 
@@ -64,7 +70,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 - Removed Hessian matrix dimension checking from `parse_hessian`. Dimension validation is already done via `pydantic` on the `AtomicResult` object.
 
-## [0.1.0]
+## [0.1.0] - 2023-03-23
 
 ### Added
 
@@ -72,7 +78,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Can return either `AtomicResult` or `FailedOperation` objects depending on whether calculation succeeded or failed.
 - Tests for all parsers and the main `parse` function.
 
-[unreleased]: https://github.com/coltonbh/qcparse/compare/0.5.0...HEAD
+[unreleased]: https://github.com/coltonbh/qcparse/compare/0.5.1...HEAD
+[0.5.1]: https://github.com/coltonbh/qcparse/releases/tag/0.5.1
 [0.5.0]: https://github.com/coltonbh/qcparse/releases/tag/0.5.0
 [0.4.1]: https://github.com/coltonbh/qcparse/releases/tag/0.4.1
 [0.4.0]: https://github.com/coltonbh/qcparse/releases/tag/0.4.0
