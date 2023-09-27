@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from qcparse.models import single_point_data_collector
+from qcparse.models import single_point_results_namespace
 
 
 @pytest.fixture(scope="session")
@@ -19,4 +19,4 @@ def terachem_energy_stdout(test_data_dir):
 
 @pytest.fixture(scope="function")
 def data_collector():
-    return single_point_data_collector(collect_inputs=True)
+    return single_point_results_namespace()

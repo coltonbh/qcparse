@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [unreleased]
 
+### Removed
+
+- All input parsing details from the library.
+
 ## [0.5.1] - 2023-09-19
 
 ### Changed

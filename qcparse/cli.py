@@ -1,8 +1,7 @@
 import argparse
-import json
 from pathlib import Path
 
-from .main import parse_results
+from .main import parse
 
 
 def main():
@@ -18,8 +17,8 @@ def main():
 
     args = parser.parse_args()
 
-    computed_props = parse_results(Path(args.filepath), args.program, args.filetype)
+    single_point_results = parse(Path(args.filepath), args.program, args.filetype)
     # Hacking in pretty print since probably preferred for most users
     # Can update to result.json(indent=4) when this PR accepted
     # https://github.com/MolSSI/QCElemental/pull/307
-    print(json.dumps(computed_props.dict(), indent=4))
+    print(single_point_results.model_dump_json(indent=4))

@@ -6,26 +6,21 @@ from typing import List, Optional
 from qcio import CalcType
 
 from qcparse.exceptions import MatchNotFoundError
-from qcparse.registry import registry
+from qcparse.models import ParserSpec, registry
 
 
 def parser(
     filetype: str,
     *,
     required: bool = True,
-    input_data: bool = False,
     only: Optional[List[CalcType]] = None,
 ):
-    """Decorator to register a function as a parser for program output filetype.
+    """Decorator to register a function as a parser.
 
     Args:
         filetype: The filetype the parser operates on.
         required: If True and the parser fails a MatchNotFoundError will be raised.
             If False and the parser fails the value will be ignored.
-        input_data: Whether the parser is for input data, such as method, basis, or a
-            molecular structure, instead of computed output data. If True the parser
-            will be not be called if a SinglePointInput object is passed as input_data
-            to the top-level parse function.
         only: Only register the parser on these CalcTypes. If None the parser will be
             registered for all CalcTypes.
     """
@@ -35,7 +30,7 @@ def parser(
         module = inspect.getmodule(func).__name__
         program_name = module.split(".")[-1]
 
-        # Dynamically import the relevant Enum module
+        # Dynamically import the relevant FileTypes Enum from the module
         supported_file_types = importlib.import_module(f"{module}").FileType
 
         # Check if filetype is a member of the relevant Enum
@@ -46,16 +41,16 @@ def parser(
                 f"'{filetype}' to the FileTypes Enum in '{module}' or change "
                 f"the parser wrapper to the correct filetype."
             )
+        # Create ParserSpec
+        spec = ParserSpec(
+            parser=func,
+            filetype=filetype,
+            required=required,
+            calctypes=only or [CalcType.energy, CalcType.gradient, CalcType.hessian],
+        )
 
         # Register the function in the global registry
-        registry.register(
-            program_name,
-            func,
-            filetype,
-            required,
-            input_data,
-            only,
-        )
+        registry.register(program_name, spec)
 
         return func
 

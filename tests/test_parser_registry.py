@@ -1,7 +1,7 @@
 import pytest
 
 from qcparse.exceptions import RegistryError
-from qcparse.registry import ParserSpec, registry
+from qcparse.models import ParserSpec, registry
 
 
 def test_get_parsers_program():
@@ -20,14 +20,6 @@ def test_get_parsers_program_filetype():
     for parser in parsers:
         assert isinstance(parser, ParserSpec)
         assert parser.filetype == "stdout"
-
-
-def test_get_parsers_program_collect_inputs():
-    parsers = registry.get_parsers("terachem", collect_inputs=False)
-    assert parsers
-    for parser in parsers:
-        assert isinstance(parser, ParserSpec)
-        assert not parser.input_data
 
 
 def test_get_parsers_program_calctype():
