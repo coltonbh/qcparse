@@ -1,6 +1,6 @@
 # qcparse
 
-A library for parsing Quantum Chemistry output files into structured data objects. Uses data structures from [qcio](https://github.com/coltonbh/qcio).
+A library for parsing Quantum Chemistry output files into structured data objects and converting structured input objects into program-native input files. Uses data structures from [qcio](https://github.com/coltonbh/qcio).
 
 [![image](https://img.shields.io/pypi/v/qcparse.svg)](https://pypi.python.org/pypi/qcparse)
 [![image](https://img.shields.io/pypi/l/qcparse.svg)](https://pypi.python.org/pypi/qcparse)
@@ -9,9 +9,15 @@ A library for parsing Quantum Chemistry output files into structured data object
 [![Actions status](https://github.com/coltonbh/qcparse/workflows/Basic%20Code%20Quality/badge.svg)](https://github.com/coltonbh/qcparse/actions)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/charliermarsh/ruff/main/assets/badge/v1.json)](https://github.com/charliermarsh/ruff)
 
-## ☝️ NOTE
+`qcparse` works in harmony with a suite of other quantum chemistry tools for fast, structured, and interoperable quantum chemistry.
 
-This package was originally designed to run as a standalone parser to generate `SinglePointOutput` and `ProgramFailure` objects parsing all input and provenance data in addition to computed output data; however, once [qcop](https://github.com/coltonbh/qcop) was built to power quantum chemistry programs the only parsing needed was for the simpler `SinglePointResults` values. There are still remnants of the original `parse` function in the repo and I've left them for now in case I find a use for the general purpose parsing.
+## The QC Suite of Programs
+
+- [qcio](https://github.com/coltonbh/qcio) - Beautiful and user friendly data structures for quantum chemistry.
+- [qcparse](https://github.com/coltonbh/qcparse) - A library for efficient parsing of quantum chemistry data into structured `qcio` objects and conversion of `qcio` input objects to program-native input files.
+- [qcop](https://github.com/coltonbh/qcop) - A package for operating quantum chemistry programs using `qcio` standardized data structures. Compatible with `TeraChem`, `psi4`, `QChem`, `NWChem`, `ORCA`, `Molpro`, `geomeTRIC` and many more.
+- [BigChem](https://github.com/mtzgroup/bigchem) - A distributed application for running quantum chemistry calculations at scale across clusters of computers or the cloud. Bring multi-node scaling to your favorite quantum chemistry program.
+- `ChemCloud` - A [web application](https://github.com/mtzgroup/chemcloud-server) and associated [Python client](https://github.com/mtzgroup/chemcloud-client) for exposing a BigChem cluster securely over the internet.
 
 ## ✨ Basic Usage
 
@@ -24,17 +30,17 @@ This package was originally designed to run as a standalone parser to generate `
 - Parse a file into a `SinglePointResults` object with a single line of code.
 
   ```python
-  from qcparse import parse_results
-
-  results = parse_results("/path/to/tc.out", "terachem")
+  from qcparse import parse
+  # May pass a path or the contents of a file as string/bytes
+  results = parse("terachem", "/path/to/stdout.log")
   ```
 
-- The `results` object will be a `SinglePointResults` object. Run `dir(results)` inside a Python interpreter to see the various values you can access. A few prominent values are shown here as an example:
+- The `results` object will be a `qcio.SinglePointResults` object. Run `dir(results)` inside a Python interpreter to see the various values you can access. A few prominent values are shown here as an example:
 
   ```python
-  from qcparse import parse_results
+  from qcparse import parse
 
-  results = parse_results("/path/to/tc.out", "terachem")
+  results = parse("/path/to/tc.out", "terachem")
 
   results.energy
   results.gradient # If a gradient calc
@@ -47,7 +53,7 @@ This package was originally designed to run as a standalone parser to generate `
 
   ```py
   with open("results.json", "w") as f:
-      f.write(result.json())
+      f.write(result.model_dumps_json())
   ```
 
 - And read from disk like this:
@@ -68,6 +74,6 @@ This package was originally designed to run as a standalone parser to generate `
 
 ## 💻 Contributing
 
-If there's data you'd like parsed fromI output files, please open an issue in this repo explaining the data items you'd like parsed and include an example output file containing the data, like [this](https://github.com/coltonbh/qcparse/issues/2).
+Please see the [contributing guide](./CONTRIBUTING.md) for details on how to contribute new parsers to this project :)
 
-If you'd like to add a parser yourself see the docstring in `qcparse.parsers` for a primer and see the examples written in the module. Adding a parser for new data is quick and easy :)
+If there's data you'd like parsed from output files or want to support input files for a new program, please open an issue in this repo explaining the data items you'd like parsed and include an example output file containing the data, like [this](https://github.com/coltonbh/qcparse/issues/2).

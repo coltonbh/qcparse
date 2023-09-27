@@ -6,7 +6,7 @@ from qcio import Molecule
 hydrogen_atom = Molecule(symbols=["H"], geometry=[[0, 0, 0]])
 
 
-def get_file_content(
+def get_file_contents(
     data_or_path: Union[str, bytes, Path]
 ) -> Tuple[Union[str, bytes], Optional[Path]]:
     """Return the file content from a path, str, or bytes and the associated path.

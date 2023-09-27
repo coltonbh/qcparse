@@ -1,7 +1,102 @@
 """Simple data models to support parsing of QM program output files."""
 
+from collections import defaultdict
 from types import SimpleNamespace
-from typing import Dict
+from typing import Callable, Dict, List, Optional
+
+from pydantic import BaseModel
+from qcio import CalcType
+
+from .exceptions import RegistryError
+
+
+class ParserSpec(BaseModel):
+    """Information about a parser function.
+
+    Attributes:
+        parser: The parser function.
+        filetype: The filetype that the parser is for.
+        required: Whether the parser is required to be successful for the parsing to
+            be considered successful. If True and the parser fails a MatchNotFoundError
+            will be raised. If False and the parser fails the value will be ignored.
+        calctypes: The calculation types that the parser work on.
+    """
+
+    parser: Callable
+    filetype: str
+    required: bool
+    calctypes: List[CalcType]
+
+
+class ParserRegistry(BaseModel):
+    """Registry for parser functions."""
+
+    registry: Dict[str, List[ParserSpec]] = defaultdict(list)
+
+    def register(self, program: str, parser_spec: ParserSpec) -> None:
+        """Register a new parser function.
+
+        Args:
+            program: The program that the parser is for.
+            parser_spec: ParserSpec objects containing the parser function and
+                information about the parser.
+        """
+        self.registry[program].append(parser_spec)
+
+    def get_parsers(
+        self,
+        program: str,
+        filetype: Optional[str] = None,
+        calctype: Optional[CalcType] = None,
+    ) -> List[ParserSpec]:
+        """Get all parser functions for a given program.
+
+        Args:
+            program: The program to get parsers for.
+            filetype: If given only return parsers for this filetype.
+            calctype: Filter parsers for a given calculation type.
+
+        Returns:
+            List of ParserSpec objects.
+        """
+
+        parser_specs: List[ParserSpec] = self.registry[program]
+        if not parser_specs:
+            raise RegistryError(f"No parsers registered for program '{program}'.")
+
+        # Filter parsers by filetype and calctype
+        if filetype:
+            parser_specs = [ps for ps in parser_specs if ps.filetype == filetype]
+
+        if calctype:
+            parser_specs = [ps for ps in parser_specs if calctype in ps.calctypes]
+        return parser_specs
+
+    def supported_programs(self) -> List[str]:
+        """Get all programs with registered parsers.
+
+        Returns:
+            List of program names.
+        """
+        return list(self.registry.keys())
+
+    def supported_filetypes(self, program: str) -> List[str]:
+        """Get all filetypes for a given program.
+
+        Args:
+            program: The program to get filetypes for.
+
+        Returns:
+            List of filetypes.
+        """
+        return list(
+            set(
+                [str(parser_info.filetype) for parser_info in self.get_parsers(program)]
+            )
+        )
+
+
+registry = ParserRegistry()
 
 
 class ParsedDataCollector(SimpleNamespace):
@@ -12,7 +107,7 @@ class ParsedDataCollector(SimpleNamespace):
 
         This provides a sanity check on parsers to make sure they are not overwriting
         values that have already been set by another parser. There should only ever be
-        one parser for one value for a given program and filetype.
+        one parser per value for a given program and filetype.
 
         >>> from qcparse.models import ParsedDataCollector
         >>> obj = ParsedDataCollector()
@@ -49,20 +144,9 @@ class ParsedDataCollector(SimpleNamespace):
         }
 
 
-def single_point_data_collector(collect_inputs: bool = True) -> ParsedDataCollector:
-    """Create a namespace for a single point result."""
+def single_point_results_namespace() -> ParsedDataCollector:
+    """Create a namespace for a qcio.SinglePointResult."""
     output_obj = ParsedDataCollector()
-    if collect_inputs:
-        # Input Objects
-        output_obj.input_data = ParsedDataCollector()
-        output_obj.input_data.model = ParsedDataCollector()
-
-    # Output Objects
-    output_obj.computed = ParsedDataCollector()
-    output_obj.provenance = ParsedDataCollector()
     output_obj.extras = ParsedDataCollector()
-
-    # Scratch space for parsers
-    output_obj.scratch = ParsedDataCollector()
 
     return output_obj
