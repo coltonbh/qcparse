@@ -6,11 +6,11 @@ from typing import List, Optional
 from qcio import CalcType
 
 from qcparse.exceptions import MatchNotFoundError
-from qcparse.models import ParserSpec, registry
+from qcparse.models import FileType, ParserSpec, registry
 
 
 def parser(
-    filetype: str,
+    filetype: str = FileType.stdout,
     *,
     required: bool = True,
     only: Optional[List[CalcType]] = None,
@@ -31,10 +31,10 @@ def parser(
         program_name = module.split(".")[-1]
 
         # Dynamically import the relevant FileTypes Enum from the module
-        supported_file_types = importlib.import_module(f"{module}").FileType
+        supported_file_types = importlib.import_module(f"{module}").SUPPORTED_FILETYPES
 
         # Check if filetype is a member of the relevant Enum
-        if filetype not in supported_file_types.__members__:
+        if filetype not in supported_file_types:
             raise ValueError(
                 f"Program '{program_name}' does not support the filetype '{filetype}' "
                 f"defined in the decorator around '{func.__name__}'. Ether add "

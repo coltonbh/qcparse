@@ -4,10 +4,10 @@ Hey there 👋! Look at you wanting to contribute! This package is designed to m
 
 ## TL;DR - How to add new parsers
 
-1. Create a file in the `parsers` directory named after the quantum chemistry program, e.g., `qchem.py`.
-2. Create `class FileType(str, Enum)` in the module registering the file types the parsers support.
+1. Create a file in the `parsers` directory named after the quantum chemistry program, e.g., `terachem.py`.
+2. Create a `SUPPORTED_FILETYPES` set in the module containing the file types the parsers support.
 3. If `stdout` is a file type then create a `def get_calctype(string: str) -> CalcType` function that returns the `CalcType` for the file. One of `CalcType.energy`, `CalcType.gradient`, or `CalcType.hessian`.
-4. Create simple parser functions that accept file data (`str|bytes`) and a `data_collector` object. The parser should 1) parse a single piece of data from the file, 2) cast it to the correct Python type and 3) set it on the output object at its corresponding location found on the `qcio.SinglePointResults` object. Register this parser by decorating it with the `@parser` decorator. The decorator must declare `filetype` and can optionally declare `required` (`True` by default), and `only` (`None` by default). See the `qcparse.utils.parser` decorator for details on what these mean.
+4. Create simple parser functions that accept file data (`str | bytes`) and a `data_collector` object. The parser should 1) parse a single piece of data from the file, 2) cast it to the correct Python type and 3) set it on the output object at its corresponding location found on the `qcio.SinglePointResults` object. Register this parser by decorating it with the `@parser()` decorator. The decorator optionally accepts a `filetype` argument (`FileType.stdout` by default) and can declare keyword arguments `required` (`True` by default), and `only` (`None` by default). See the `qcparse.utils.parser` decorator for details on what these mean.
 
    ```py
    @parser(filetype=FileType.stdout)

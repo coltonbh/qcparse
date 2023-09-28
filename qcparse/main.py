@@ -6,14 +6,14 @@ from importlib import import_module
 from pathlib import Path
 from typing import List, Union
 
-from qcio import SinglePointResults
+from qcio import ProgramInput, SinglePointResults
 
-from .exceptions import MatchNotFoundError
-from .models import ParserSpec, registry, single_point_results_namespace
+from .exceptions import EncoderError, MatchNotFoundError, ParserError
+from .models import NativeInput, ParserSpec, registry, single_point_results_namespace
 from .parsers import *  # noqa: F403 Ensure all parsers get registered
 from .utils import get_file_contents
 
-__all__ = ["parse", "parse_results", "registry"]
+__all__ = ["parse", "parse_results", "encode", "registry"]
 
 
 def parse(
@@ -40,36 +40,36 @@ def parse(
         A SinglePointResults object containing the parsed data.
 
     Raises:
+        ParserError: If no parsers are registered for the filetype of the program.
         MatchNotFoundError: If a required parser fails to parse its data.
     """
-    file_content, _ = get_file_contents(data_or_path)
+    parsers = import_module(f"qcparse.parsers.{program}")
 
-    # Create a SinglePointResult namespace object to collect the parsed data
-    spr_namespace = single_point_results_namespace()
+    # Check that filetype is supported by the program's parsers
+    if filetype not in parsers.SUPPORTED_FILETYPES:
+        raise ParserError(f"filetype '{filetype}' not supported by {program} parsers.")
+
+    file_content = get_file_contents(data_or_path)
 
     # Get the calctype if filetype is 'stdout'
     if filetype == "stdout":
-        parse_calctype = import_module(f"qcparse.parsers.{program}").parse_calctype
-        calctype = parse_calctype(file_content)
+        calctype = parsers.parse_calctype(file_content)
 
-    else:
-        calctype = None
-
-    # Get all the parsers for the program and filetype
+    # Get all the parsers for the program, filetype, and calctype
     parser_specs: List[ParserSpec] = registry.get_parsers(program, filetype, calctype)
+
+    # Create a SinglePointResult namespace object to collect the parsed data
+    data_collector = single_point_results_namespace()
 
     # Apply parsers to the file content.
     for ps in parser_specs:
         try:
-            # This will raise a MatchNotFound error if the parser can't find its data
-            ps.parser(file_content, spr_namespace)
-        except MatchNotFoundError:
+            ps.parser(file_content, data_collector)
+        except MatchNotFoundError:  # Raised if the parser can't find its data
             if ps.required:
                 raise
-            else:  # Parser didn't find anything, but it wasn't required
-                pass
 
-    return SinglePointResults(**spr_namespace.dict())
+    return SinglePointResults(**data_collector.dict())
 
 
 @functools.wraps(parse)
@@ -81,3 +81,24 @@ def parse_results(*args, **kwargs):
         stacklevel=2,
     )
     return parse(*args, **kwargs)
+
+
+def encode(inp_data: ProgramInput, program: str) -> NativeInput:
+    """Encode a ProgramInput object to a NativeInput object.
+
+    Args:
+        inp_data: The ProgramInput object to encode.
+        program: The program for which to encode the input.
+
+    Returns:
+        A NativeInput object with the encoded input.
+
+    Raises:
+        EncoderError: If the calctype is not supported by the program's encoder.
+    """
+    # Check that calctype is supported by the encoder
+    encoder = import_module(f"qcparse.encoders.{program}")
+    if inp_data.calctype not in encoder.SUPPORTED_CALCTYPES:
+        raise EncoderError(f"Calctype '{inp_data.calctype}' not supported by encoder.")
+
+    return encoder.encode(inp_data)

@@ -1,10 +1,11 @@
 """Simple data models to support parsing of QM program output files."""
 
 from collections import defaultdict
+from enum import Enum
 from types import SimpleNamespace
 from typing import Callable, Dict, List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 from qcio import CalcType
 
 from .exceptions import RegistryError
@@ -150,3 +151,34 @@ def single_point_results_namespace() -> ParsedDataCollector:
     output_obj.extras = ParsedDataCollector()
 
     return output_obj
+
+
+class FileType(str, Enum):
+    """Enum of supported TeraChem filetypes."""
+
+    stdout = "stdout"
+
+
+class NativeInput(BaseModel):
+    """Native input file data. Writing these files to disk should produce a valid input.
+
+    Attributes:
+        input: input file for the program
+        geometry: xyz file or other geometry file required for the calculation
+        geometry_filename: filename of the geometry file referenced in the input
+    """
+
+    input_file: str
+    geometry_file: Optional[str] = None
+    geometry_filename: Optional[str] = None
+
+    @model_validator(mode="after")
+    def ensure_geometry_filename(self):
+        """Ensure that geometry_filename is set if geometry is set."""
+        if self.geometry_file and not self.geometry_filename:
+            raise ValueError(
+                "geometry_filename must be set if geometry is set. "
+                "Set geometry_filename to the name of the geometry file as referenced "
+                "in the input file."
+            )
+        return self

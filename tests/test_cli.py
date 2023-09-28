@@ -1,4 +1,3 @@
-import json
 import subprocess
 
 from qcparse.main import parse
@@ -15,5 +14,5 @@ def test_cli(test_data_dir):
 
     # Check the output
     parse_result = parse(filepath, "terachem")
-    expected_output = json.dumps(json.loads(parse_result.json()), indent=4)
+    expected_output = parse_result.model_dump_json(indent=4)
     assert result.stdout.strip() == expected_output

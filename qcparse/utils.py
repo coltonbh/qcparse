@@ -1,14 +1,12 @@
 from pathlib import Path
-from typing import Optional, Tuple, Union
+from typing import Optional, Union
 
 from qcio import Molecule
 
 hydrogen_atom = Molecule(symbols=["H"], geometry=[[0, 0, 0]])
 
 
-def get_file_contents(
-    data_or_path: Union[str, bytes, Path]
-) -> Tuple[Union[str, bytes], Optional[Path]]:
+def get_file_contents(data_or_path: Union[str, bytes, Path]) -> Union[str, bytes]:
     """Return the file content from a path, str, or bytes and the associated path.
 
     Args:
@@ -21,7 +19,7 @@ def get_file_contents(
     filepath: Optional[Path]
 
     if isinstance(data_or_path, bytes):
-        return data_or_path, None
+        return data_or_path
 
     filepath = Path(data_or_path)
     try:
@@ -34,10 +32,8 @@ def get_file_contents(
                 pass
         else:
             file_content = str(data_or_path)
-            filepath = None
     except OSError:
         # String too long to be filepath
         file_content = str(data_or_path)
-        filepath = None
 
-    return file_content, filepath
+    return file_content

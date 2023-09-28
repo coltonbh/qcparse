@@ -2,7 +2,11 @@ class BaseError(Exception):
     """Base tcparse exceptions"""
 
 
-class MatchNotFoundError(BaseError):
+class ParserError(BaseError):
+    """Base exception for parsers"""
+
+
+class MatchNotFoundError(ParserError):
     """Exception raised when a parsing match is not found"""
 
     def __init__(self, regex: str, string: str):
@@ -15,3 +19,7 @@ class MatchNotFoundError(BaseError):
 
 class RegistryError(BaseError):
     """Exception raised when a registry error occurs"""
+
+
+class EncoderError(BaseError):
+    """Exception raised when a encoder error occurs"""
