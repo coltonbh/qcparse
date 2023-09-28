@@ -1,20 +1,15 @@
 """Parsers for TeraChem output files."""
 
 import re
-from enum import Enum
 
 from qcio import CalcType
 
 from qcparse.exceptions import MatchNotFoundError
-from qcparse.models import ParsedDataCollector
+from qcparse.models import FileType, ParsedDataCollector
 
 from .utils import parser, regex_search
 
-
-class FileType(str, Enum):
-    """Enum of supported TeraChem filetypes."""
-
-    stdout = "stdout"
+SUPPORTED_FILETYPES = {FileType.stdout}
 
 
 def parse_calctype(string: str) -> CalcType:
@@ -31,7 +26,7 @@ def parse_calctype(string: str) -> CalcType:
     raise MatchNotFoundError(regex, string)
 
 
-@parser(filetype=FileType.stdout)
+@parser()
 def parse_energy(string: str, data_collector: ParsedDataCollector):
     """Parse the final energy from TeraChem stdout.
 
@@ -43,7 +38,7 @@ def parse_energy(string: str, data_collector: ParsedDataCollector):
     data_collector.energy = float(regex_search(regex, string).group(1))
 
 
-@parser(filetype=FileType.stdout, only=[CalcType.gradient, CalcType.hessian])
+@parser(only=[CalcType.gradient, CalcType.hessian])
 def parse_gradient(string: str, data_collector: ParsedDataCollector):
     """Parse gradient from TeraChem stdout."""
     # This will match all floats after the dE/dX dE/dY dE/dZ header and stop at the
@@ -62,7 +57,7 @@ def parse_gradient(string: str, data_collector: ParsedDataCollector):
     data_collector.gradient = gradient
 
 
-@parser(filetype=FileType.stdout, only=[CalcType.hessian])
+@parser(only=[CalcType.hessian])
 def parse_hessian(string: str, data_collector: ParsedDataCollector):
     """Parse Hessian Matrix from TeraChem stdout
 
@@ -102,14 +97,14 @@ def parse_hessian(string: str, data_collector: ParsedDataCollector):
     data_collector.hessian = hessian
 
 
-@parser(filetype=FileType.stdout)
+@parser()
 def parse_natoms(string: str, data_collector: ParsedDataCollector):
     """Parse number of atoms value from TeraChem stdout"""
     regex = r"Total atoms:\s*(\d+)"
     data_collector.calcinfo_natoms = int(regex_search(regex, string).group(1))
 
 
-@parser(filetype=FileType.stdout)
+@parser()
 def parse_nmo(string: str, data_collector: ParsedDataCollector):
     """Parse the number of molecular orbitals TeraChem stdout"""
     regex = r"Total orbitals:\s*(\d+)"
@@ -136,7 +131,7 @@ def parse_version_string(string: str) -> str:
     return f"{parse_terachem_version(string)} [{parse_git_commit(string)}]"
 
 
-@parser(filetype=FileType.stdout)
+@parser()
 def parse_version(string: str, data_collector: ParsedDataCollector):
     """Parse TeraChem version from TeraChem stdout."""
     data_collector.extras.program_version = parse_version_string(string)

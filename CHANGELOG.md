@@ -10,6 +10,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 - All input parsing details from the library.
 
+### Added
+
+- `encode` top level function and encoder for TeraChem input files.
+
+### Changed
+
+- Added `FileType.stdout` as default `filetype` argument to `parse` decorator to reduce boilerplate in parsers.
+
 ## [0.5.1] - 2023-09-19
 
 ### Changed
