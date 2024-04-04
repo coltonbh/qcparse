@@ -69,7 +69,6 @@ def parse_hessian(string: str, data_collector: ParsedDataCollector):
         parse_gradient function above, and then doing the math to figure out how to
         properly sequence those values to from the Hessian matrix given TeraChem's
         six-column format for printing out Hessian matrix entries.
-
     """
     # requires .format(int). {{}} values are to escape {15|2} for .format()
     regex = r"(?:\s+{}\s)((?:\s-?\d\.\d{{15}}e[+-]\d{{2}})+)"
@@ -111,10 +110,10 @@ def parse_nmo(string: str, data_collector: ParsedDataCollector):
     data_collector.calcinfo_nmo = int(regex_search(regex, string).group(1))
 
 
-def parse_git_commit(string: str) -> str:
-    """Parse TeraChem git commit from TeraChem stdout."""
-    regex = r"Git Version: (\S*)"
-    return regex_search(regex, string).group(1)
+def parse_version_control_details(string: str) -> str:
+    """Parse TeraChem git commit or Hg version from TeraChem stdout."""
+    regex = r"(Git|Hg) Version: (\S*)"
+    return regex_search(regex, string).group(2)
 
 
 def parse_terachem_version(string: str) -> str:
@@ -128,13 +127,7 @@ def parse_version_string(string: str) -> str:
 
     Matches format of 'terachem --version' on command line.
     """
-    return f"{parse_terachem_version(string)} [{parse_git_commit(string)}]"
-
-
-@parser()
-def parse_version(string: str, data_collector: ParsedDataCollector):
-    """Parse TeraChem version from TeraChem stdout."""
-    data_collector.extras.program_version = parse_version_string(string)
+    return f"{parse_terachem_version(string)} [{parse_version_control_details(string)}]"
 
 
 def calculation_succeeded(string: str) -> bool:

@@ -7,12 +7,12 @@ from qcparse.parsers.terachem import (
     calculation_succeeded,
     parse_calctype,
     parse_energy,
-    parse_git_commit,
     parse_gradient,
     parse_hessian,
     parse_natoms,
     parse_nmo,
-    parse_version,
+    parse_version_control_details,
+    parse_version_string,
 )
 
 from .data import gradients, hessians
@@ -71,12 +71,15 @@ def test_parse_calctype_raises_exception():
         parse_calctype("No driver here")
 
 
-def test_parse_version(terachem_energy_stdout, data_collector):
-    parse_version(terachem_energy_stdout, data_collector)
-    assert (
-        data_collector.extras.program_version
-        == "v1.9-2022.03-dev [4daa16dd21e78d64be5415f7663c3d7c2785203c]"
-    )
+def test_parse_version_git(terachem_energy_stdout):
+    parsed = parse_version_string(terachem_energy_stdout)
+    assert parsed == "v1.9-2022.03-dev [4daa16dd21e78d64be5415f7663c3d7c2785203c]"
+
+
+def test_parse_version_hg(test_data_dir):
+    hg_stdout = (test_data_dir / "hg.out").read_text()
+    parsed = parse_version_string(hg_stdout)
+    assert parsed == "v1.5K [ccdev]"
 
 
 def test_calculation_succeeded(terachem_energy_stdout):
@@ -177,7 +180,7 @@ def test_parse_nmo(test_data_dir, filename, nmo, data_collector):
 
 
 def test_parse_git_commit(terachem_energy_stdout):
-    git_commit = parse_git_commit(terachem_energy_stdout)
+    git_commit = parse_version_control_details(terachem_energy_stdout)
     assert (
         git_commit
         == "4daa16dd21e78d64be5415f7663c3d7c2785203c"  # pragma: allowlist secret
