@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [unreleased]
 
+### Changed
+
+- TeraChem `parse_git_commit` updated to `parse_version_control_details` to accommodate older versions of TeraChem compiled from the `Hg` days.
+
+### Removed
+
+- TeraChem `parse_version` parser. It was unused given the switch to only parsing `SinglePointResults` objects and not `Provenance` objects as well. The `parse_version_string` function is used by `qcop` to get the version of the program. We do not need to set the version of the program at `SinglePointResults.extras.program_version` anymore.
+
 ## [0.5.2] - 2023-09-27
 
 ### Removed

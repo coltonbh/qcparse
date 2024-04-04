@@ -11,5 +11,6 @@ that use re.findall (like terachem.parse_hessian) or rely upon not finding a mat
 implement a different interface, but please strive to follow this basic patterns as much
 as possible.
 """
+
 # Required for parsers to register
 from .terachem import *  # noqa:  F403
