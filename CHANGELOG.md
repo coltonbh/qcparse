@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [unreleased]
 
+## [0.5.3] - 2024-04-04
+
 ### Changed
 
 - TeraChem `parse_git_commit` updated to `parse_version_control_details` to accommodate older versions of TeraChem compiled from the `Hg` days.
@@ -100,7 +102,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Can return either `AtomicResult` or `FailedOperation` objects depending on whether calculation succeeded or failed.
 - Tests for all parsers and the main `parse` function.
 
-[unreleased]: https://github.com/coltonbh/qcparse/compare/0.5.2...HEAD
+[unreleased]: https://github.com/coltonbh/qcparse/compare/0.5.3...HEAD
+[0.5.3]: https://github.com/coltonbh/qcparse/releases/tag/0.5.3
 [0.5.2]: https://github.com/coltonbh/qcparse/releases/tag/0.5.2
 [0.5.1]: https://github.com/coltonbh/qcparse/releases/tag/0.5.1
 [0.5.0]: https://github.com/coltonbh/qcparse/releases/tag/0.5.0
