@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [unreleased]
 
+## [0.6.0] - 2024-06-10
+
 ### Changed
 
 - Updated to `qcio 0.10.0` to use new `Structure` rather than `Molecule` nomenclature.
@@ -106,7 +108,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Can return either `AtomicResult` or `FailedOperation` objects depending on whether calculation succeeded or failed.
 - Tests for all parsers and the main `parse` function.
 
-[unreleased]: https://github.com/coltonbh/qcparse/compare/0.5.3...HEAD
+[unreleased]: https://github.com/coltonbh/qcparse/compare/0.6.0...HEAD
+[0.6.0]: https://github.com/coltonbh/qcparse/releases/tag/0.6.0
 [0.5.3]: https://github.com/coltonbh/qcparse/releases/tag/0.5.3
 [0.5.2]: https://github.com/coltonbh/qcparse/releases/tag/0.5.2
 [0.5.1]: https://github.com/coltonbh/qcparse/releases/tag/0.5.1
