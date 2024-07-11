@@ -194,15 +194,15 @@ def test_write_input_files(prog_inp):
     native_input = encode(prog_inp)
     # Testing that we capture:
     # 1. Driver
-    # 2. Molecule
+    # 2. Structure
     # 3. Model
     # 4. Keywords (test booleans to lower case, ints, sts, floats)
 
     correct_tcin = (
         f"{'run':<{PADDING}} {prog_inp.calctype}\n"
         f"{'coordinates':<{PADDING}} {XYZ_FILENAME}\n"
-        f"{'charge':<{PADDING}} {prog_inp.molecule.charge}\n"
-        f"{'spinmult':<{PADDING}} {prog_inp.molecule.multiplicity}\n"
+        f"{'charge':<{PADDING}} {prog_inp.structure.charge}\n"
+        f"{'spinmult':<{PADDING}} {prog_inp.structure.multiplicity}\n"
         f"{'method':<{PADDING}} {prog_inp.model.method}\n"
         f"{'basis':<{PADDING}} {prog_inp.model.basis}\n"
         f"{'purify':<{PADDING}} {prog_inp.keywords['purify']}\n"
@@ -221,8 +221,8 @@ def test_write_input_files_renames_hessian_to_frequencies(prog_inp):
     assert native_input.input_file == (
         f"{'run':<{PADDING}} frequencies\n"
         f"{'coordinates':<{PADDING}} {XYZ_FILENAME}\n"
-        f"{'charge':<{PADDING}} {prog_inp.molecule.charge}\n"
-        f"{'spinmult':<{PADDING}} {prog_inp.molecule.multiplicity}\n"
+        f"{'charge':<{PADDING}} {prog_inp.structure.charge}\n"
+        f"{'spinmult':<{PADDING}} {prog_inp.structure.multiplicity}\n"
         f"{'method':<{PADDING}} {prog_inp.model.method}\n"
         f"{'basis':<{PADDING}} {prog_inp.model.basis}\n"
         f"{'purify':<{PADDING}} {prog_inp.keywords['purify']}\n"
