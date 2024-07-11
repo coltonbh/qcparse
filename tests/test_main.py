@@ -22,8 +22,8 @@ def test_main_terachem_encoder(prog_inp):
     correct_tcin = (
         f"{'run':<{terachem.PADDING}} {prog_inp.calctype}\n"
         f"{'coordinates':<{terachem.PADDING}} {terachem.XYZ_FILENAME}\n"
-        f"{'charge':<{terachem.PADDING}} {prog_inp.molecule.charge}\n"
-        f"{'spinmult':<{terachem.PADDING}} {prog_inp.molecule.multiplicity}\n"
+        f"{'charge':<{terachem.PADDING}} {prog_inp.structure.charge}\n"
+        f"{'spinmult':<{terachem.PADDING}} {prog_inp.structure.multiplicity}\n"
         f"{'method':<{terachem.PADDING}} {prog_inp.model.method}\n"
         f"{'basis':<{terachem.PADDING}} {prog_inp.model.basis}\n"
         f"{'purify':<{terachem.PADDING}} {prog_inp.keywords['purify']}\n"

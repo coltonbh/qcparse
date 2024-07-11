@@ -27,18 +27,18 @@ def encode(inp_obj: ProgramInput) -> NativeInput:
     # Collect lines for input file
     inp_lines = []
     inp_lines.append(f"{'run':<{PADDING}} {calctype}")
-    # Molecule
+    # Structure
     inp_lines.append(f"{'coordinates':<{PADDING}} {XYZ_FILENAME}")
-    inp_lines.append(f"{'charge':<{PADDING}} {inp_obj.molecule.charge}")
-    inp_lines.append(f"{'spinmult':<{PADDING}} {inp_obj.molecule.multiplicity}")
+    inp_lines.append(f"{'charge':<{PADDING}} {inp_obj.structure.charge}")
+    inp_lines.append(f"{'spinmult':<{PADDING}} {inp_obj.structure.multiplicity}")
     # Model
     inp_lines.append(f"{'method':<{PADDING}} {inp_obj.model.method}")
     inp_lines.append(f"{'basis':<{PADDING}} {inp_obj.model.basis}")
 
     # Keywords
     non_keywords = {
-        "charge": ".molecule.charge",
-        "spinmult": ".molecule.multiplicity",
+        "charge": ".structure.charge",
+        "spinmult": ".structure.multiplicity",
         "run": ".calctype",
         "basis": ".model.basis",
         "method": ".model.method",
@@ -54,6 +54,6 @@ def encode(inp_obj: ProgramInput) -> NativeInput:
         inp_lines.append(f"{key:<{PADDING}} {str(value).lower()}")
     return NativeInput(
         input_file="\n".join(inp_lines) + "\n",  # End file with newline
-        geometry_file=inp_obj.molecule.to_xyz(),
+        geometry_file=inp_obj.structure.to_xyz(),
         geometry_filename=XYZ_FILENAME,
     )

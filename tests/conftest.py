@@ -31,7 +31,7 @@ def prog_inp():
 
     def create_prog_input(calctype):
         return ProgramInput(
-            molecule=water,
+            structure=water,
             calctype=calctype,
             # Integration tests depend up this model; do not change
             model={"method": "hf", "basis": "sto-3g"},

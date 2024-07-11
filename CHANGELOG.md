@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [unreleased]
 
+### Changed
+
+- Updated to `qcio 0.10.0` to use new `Structure` rather than `Molecule` nomenclature.
+
 ## [0.5.3] - 2024-04-04
 
 ### Changed

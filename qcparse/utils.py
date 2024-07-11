@@ -1,9 +1,10 @@
 from pathlib import Path
 from typing import Optional, Union
 
-from qcio import Molecule
+import numpy as np
+from qcio import Structure
 
-hydrogen_atom = Molecule(symbols=["H"], geometry=[[0, 0, 0]])
+hydrogen_atom = Structure(symbols=["H"], geometry=np.array([[0, 0, 0]]))
 
 
 def get_file_contents(data_or_path: Union[str, bytes, Path]) -> Union[str, bytes]:
