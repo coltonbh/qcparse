@@ -1,10 +1,12 @@
 [tool.poetry]
 name = "qcparse"
-version = "0.6.0"
+version = "0.6.1"
 description = "A package for parsing Quantum Chemistry program file outputs into structured qcio data objects."
 authors = ["Colton Hicks <github@coltonhicks.com>"]
 license = "MIT"
 readme = "README.md"
+repository = "https://github.com/coltonbh/qcparse"
+homepage = "https://github.com/coltonbh/qcparse"
 
 [tool.poetry.dependencies]
 python = "^3.8"
@@ -19,6 +21,7 @@ pre-commit = "^3.2.0"
 pytest-cov = "^4.0.0"
 black = ">=24.0.0"
 ruff = "^0.0.275"
+types-toml = "^0.10.8.20240310"
 
 [tool.poetry.scripts]
 qcparse = "qcparse.cli:main"

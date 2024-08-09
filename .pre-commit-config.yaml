@@ -33,7 +33,7 @@ repos:
     hooks:
       - id: mypy
         additional_dependencies:
-          [tokenize-rt==3.2.0, pydantic>=1.0.0, types-paramiko]
+          [tokenize-rt==3.2.0, pydantic>=1.0.0, types-paramiko, types-toml]
   - repo: local
     hooks:
       - id: tests
