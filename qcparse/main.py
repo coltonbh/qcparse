@@ -94,7 +94,8 @@ def encode(inp_data: ProgramInput, program: str) -> NativeInput:
         A NativeInput object with the encoded input.
 
     Raises:
-        EncoderError: If the calctype is not supported by the program's encoder.
+        EncoderError: If the calctype is not supported by the program's encoder or the
+            input is invalid.
     """
     # Check that calctype is supported by the encoder
     encoder = import_module(f"qcparse.encoders.{program}")

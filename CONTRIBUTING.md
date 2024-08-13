@@ -29,3 +29,11 @@ See the `terachem.py` file for an overview.
    - The `ParsedDataCollector` object only allows setting a particular data attribute once. If a second attempt is made it raises an `AttributeError`. This provides a sanity check that multiple parsers aren't trying to write to the same field and overwriting each other.
 3. `parse` looks up the parsers for the `program` in the `parser_registry`. Parsers are registered by wrapping them with the `@parser` decorator found in `qcparse.parsers.utils`. The `@parser` decorator registers a parser with the registry under the program name of the module in which it is found, verifying that the `filetype` for which it is registered is supported by the `program` by checking `SupportedFileTypes` in the parser's module. It also registers whether a parser `must_succeed` which means an exception will be raised if this value is not found when attempting to parse a file. In order for parsers to properly register they must be imported, so make sure they are hoisted into the `qcparse.parsers.__init__` file.
 4. `parse` executes all parsers for the given `filetype` and converts the `ParsedDataCollector` object passed to all the parsers into a final `SinglePointResults` object.
+
+## Publish the package
+
+With all code merged to `master` and the latest code pulled down to your local machine, run:
+
+```sh
+python scripts/release.py x.x.x
+```
