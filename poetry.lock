@@ -634,13 +634,13 @@ files = [
 
 [[package]]
 name = "qcio"
-version = "0.10.0"
+version = "0.11.8"
 description = "Beautiful and user friendly data structures for quantum chemistry."
 optional = false
 python-versions = "<4.0,>=3.8"
 files = [
-    {file = "qcio-0.10.0-py3-none-any.whl", hash = "sha256:00c24b0a63ba0867af5247fefac091999b33e4277748bf86c031ae158acdf3ad"},
-    {file = "qcio-0.10.0.tar.gz", hash = "sha256:51d93fe6dbd6ce5c60a028fde4e164cb520c5f2602df84f7f21872deca48f820"},
+    {file = "qcio-0.11.8-py3-none-any.whl", hash = "sha256:283fd23f41807cb4a7cce49bc31495f391583d42044afdc3502c1c0f618f2814"},
+    {file = "qcio-0.11.8.tar.gz", hash = "sha256:6f5703de389f5f62c86c0ac3e7be1288cb69b89e1bcfe184d121a9a88c3526f1"},
 ]
 
 [package.dependencies]
@@ -651,7 +651,10 @@ toml = ">=0.10.2,<0.11.0"
 typing-extensions = ">=4.7.1,<5.0.0"
 
 [package.extras]
+all = ["ipython (>=8.0.0)", "matplotlib (>=3.0.0)", "openbabel-wheel (>=3.1.1.19,<4.0.0.0)", "py3Dmol (>=2.2.1)", "rdkit (>=2022.3.3)"]
+openbabel = ["openbabel-wheel (>=3.1.1.19,<4.0.0.0)"]
 rdkit = ["rdkit (>=2022.3.3)"]
+view = ["ipython (>=8.0.0)", "matplotlib (>=3.0.0)", "py3Dmol (>=2.2.1)"]
 
 [[package]]
 name = "ruff"
@@ -702,6 +705,17 @@ files = [
 ]
 
 [[package]]
+name = "tomli-w"
+version = "1.0.0"
+description = "A lil' TOML writer"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "tomli_w-1.0.0-py3-none-any.whl", hash = "sha256:9f2a07e8be30a0729e533ec968016807069991ae2fd921a78d42f429ae5f4463"},
+    {file = "tomli_w-1.0.0.tar.gz", hash = "sha256:f463434305e0336248cac9c2dc8076b707d8a12d019dd349f5c1e382dd1ae1b9"},
+]
+
+[[package]]
 name = "types-toml"
 version = "0.10.8.20240310"
 description = "Typing stubs for toml"
@@ -746,4 +760,4 @@ test = ["covdefaults (>=2.3)", "coverage (>=7.2.7)", "coverage-enable-subprocess
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.8"
-content-hash = "c621a17fd99fa64cfc359a2b1a0e28f93351f27b6896eaca75a07c8e9cf6bb94"
+content-hash = "e87c3d1b49d03f20a934eba4ac4433810bdd622a579357b87dd931771604924b"

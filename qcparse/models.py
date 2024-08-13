@@ -163,7 +163,7 @@ class NativeInput(BaseModel):
     """Native input file data. Writing these files to disk should produce a valid input.
 
     Attributes:
-        input: input file for the program
+        input_file: input file for the program
         geometry: xyz file or other geometry file required for the calculation
         geometry_filename: filename of the geometry file referenced in the input
     """
