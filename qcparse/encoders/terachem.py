@@ -3,7 +3,13 @@ from qcio import CalcType, ProgramInput
 from qcparse.exceptions import EncoderError
 from qcparse.models import NativeInput
 
-SUPPORTED_CALCTYPES = {CalcType.energy, CalcType.gradient, CalcType.hessian}
+SUPPORTED_CALCTYPES = {
+    CalcType.energy,
+    CalcType.gradient,
+    CalcType.hessian,
+    CalcType.optimization,
+    CalcType.transition_state,
+}
 XYZ_FILENAME = "geometry.xyz"
 PADDING = 20  # padding between keyword and value in tc.in
 
@@ -21,6 +27,10 @@ def encode(inp_obj: ProgramInput) -> NativeInput:
     # calctype
     if inp_obj.calctype.value == CalcType.hessian:
         calctype = "frequencies"
+    elif inp_obj.calctype.value == CalcType.optimization:
+        calctype = "minimize"
+    elif inp_obj.calctype.value == CalcType.transition_state:
+        calctype = "ts"
     else:
         calctype = inp_obj.calctype.value
 

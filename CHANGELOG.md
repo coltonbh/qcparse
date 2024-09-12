@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [unreleased]
 
+### Added
+
+- `parse_optimization_dir(...) -> OptimizationResults` for TeraChem.
+
 ## [0.6.2] - 2024-08-13
 
 ### Added
