@@ -183,13 +183,14 @@ def parse_optimization_dir(
     directory: Union[Path, str],
     stdout: str,
     *,
-    input_data: ProgramInput,
+    inp_obj: ProgramInput,
 ) -> OptimizationResults:
     """Parse the output directory of a TeraChem optimization calculation.
 
     Args:
         directory: Path to the directory containing the TeraChem output files.
         stdout: The contents of the TeraChem stdout file.
+        inp_obj: The input object used for the calculation.
 
     Returns:
         OptimizationResults object
@@ -200,7 +201,12 @@ def parse_optimization_dir(
     structures = Structure.open(directory / "optim.xyz")
     assert isinstance(structures, list), "Expected multiple structures in optim.xyz"
 
-    # Parse their gradients
+    # Parse Values
+    from qcparse import parse
+
+    # Parse all the values from the stdout file
+    spr = parse(stdout, "terachem", "stdout", CalcType.energy)
+
     gradients = parse_gradients(stdout)
     program_version = parse_version_string(stdout)
 
@@ -210,14 +216,17 @@ def parse_optimization_dir(
             input_data=ProgramInput(
                 calctype=CalcType.gradient,
                 structure=structure,
-                model=input_data.model,
-                keywords=input_data.keywords,
+                model=inp_obj.model,
+                keywords=inp_obj.keywords,
             ),
             results=SinglePointResults(
-                # TeraChem places the energy as the first comment in the xyz file
-                energy=structure.extras[Structure._xyz_comment_key][0],
-                # Will be coerced by Pydantic to np.ndarray
-                gradient=gradient,  # type: ignore
+                **{
+                    **spr.model_dump(),
+                    # TeraChem places the energy as the first comment in the xyz file
+                    "energy": structure.extras[Structure._xyz_comment_key][0],
+                    # # Will be coerced by Pydantic to np.ndarray
+                    "gradient": gradient,  # type: ignore
+                }
             ),
             success=True,
             provenance=Provenance(

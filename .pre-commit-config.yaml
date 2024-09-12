@@ -34,6 +34,10 @@ repos:
       - id: mypy
         additional_dependencies:
           [tokenize-rt==3.2.0, pydantic>=1.0.0, types-paramiko, types-toml, qcio>=0.11.8]
+  - repo: https://github.com/crate-ci/typos
+    rev: v1.24.5
+    hooks:
+      - id: typos
   - repo: local
     hooks:
       - id: tests

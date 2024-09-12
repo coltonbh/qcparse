@@ -4,9 +4,9 @@ import functools
 import warnings
 from importlib import import_module
 from pathlib import Path
-from typing import List, Union
+from typing import List, Optional, Union
 
-from qcio import ProgramInput, SinglePointResults
+from qcio import CalcType, ProgramInput, SinglePointResults
 
 from .exceptions import EncoderError, MatchNotFoundError, ParserError
 from .models import NativeInput, ParserSpec, registry, single_point_results_namespace
@@ -20,6 +20,7 @@ def parse(
     data_or_path: Union[str, bytes, Path],
     program: str,
     filetype: str = "stdout",
+    calctype: Optional[CalcType] = None,
 ) -> SinglePointResults:
     """Parse a file using the parsers registered for the given program.
 
@@ -53,7 +54,7 @@ def parse(
 
     # Get the calctype if filetype is 'stdout'
     if filetype == "stdout":
-        calctype = parsers.parse_calctype(file_content)
+        calctype = calctype if calctype else parsers.parse_calctype(file_content)
 
     # Get all the parsers for the program, filetype, and calctype
     parser_specs: List[ParserSpec] = registry.get_parsers(program, filetype, calctype)

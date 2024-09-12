@@ -29,6 +29,11 @@ def encode(inp_obj: ProgramInput) -> NativeInput:
         calctype = "frequencies"
     elif inp_obj.calctype.value == CalcType.optimization:
         calctype = "minimize"
+        if not inp_obj.keywords.get("new_minimizer", "no") == "yes":
+            raise EncoderError(
+                "Only the new_minimizer is supported for optimizations. Add "
+                "'new_minimizer': 'yes' to the keywords."
+            )
     elif inp_obj.calctype.value == CalcType.transition_state:
         calctype = "ts"
     else:

@@ -255,7 +255,7 @@ def test_parse_optimization_dir(test_data_dir, prog_inp):
     opt_inp = prog_inp("optimization")
     stdout = (test_data_dir / "terachem_opt" / "tc.out").read_text()
     opt_results = parse_optimization_dir(
-        test_data_dir / "terachem_opt", stdout, input_data=opt_inp
+        test_data_dir / "terachem_opt", stdout, inp_obj=opt_inp
     )
     for prog_output in opt_results.trajectory:
         assert prog_output.input_data.calctype == CalcType.gradient
