@@ -13,7 +13,7 @@ def test_main_terachem_energy(terachem_energy_stdout):
 def test_encode_raises_error_with_invalid_calctype(prog_inp):
     prog_inp = prog_inp("optimization")  # Not currently supported by terachem encoder
     with pytest.raises(EncoderError):
-        encode(prog_inp, "terachem")
+        encode(prog_inp, "crest")
 
 
 def test_main_terachem_encoder(prog_inp):

@@ -8,9 +8,11 @@ from qcparse.parsers.terachem import (
     parse_calctype,
     parse_energy,
     parse_gradient,
+    parse_gradients,
     parse_hessian,
     parse_natoms,
     parse_nmo,
+    parse_optimization_dir,
     parse_version_control_details,
     parse_version_string,
 )
@@ -240,3 +242,29 @@ def test_encode_raises_error_qcio_args_passes_as_keywords(prog_inp):
         prog_inp.keywords[keyword] = "some value"
         with pytest.raises(EncoderError):
             encode(prog_inp)
+
+
+def test_parse_gradients(test_data_dir):
+    stdout_opt = (test_data_dir / "terachem_opt" / "tc.out").read_text()
+
+    parsed_gradients = parse_gradients(stdout_opt)
+    assert parsed_gradients == gradients.water_opt
+
+
+def test_parse_optimization_dir(test_data_dir, prog_inp):
+    opt_inp = prog_inp("optimization")
+    stdout = (test_data_dir / "terachem_opt" / "tc.out").read_text()
+    opt_results = parse_optimization_dir(
+        test_data_dir / "terachem_opt", stdout, inp_obj=opt_inp
+    )
+    for prog_output in opt_results.trajectory:
+        assert prog_output.input_data.calctype == CalcType.gradient
+        assert prog_output.input_data.model == opt_inp.model
+        assert prog_output.input_data.keywords == opt_inp.keywords
+        assert prog_output.success is True
+        assert prog_output.provenance.program == "terachem"
+        assert (
+            prog_output.provenance.program_version
+            == "v1.9-2023.09-dev [2407d3d72955905cdd9c0dproae51e9322b8c05fd4c]"
+        )
+        assert prog_output.provenance.scratch_dir == test_data_dir
