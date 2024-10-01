@@ -25,7 +25,6 @@ def test_pdc_dict_serialization_method():
     pdc.nested_list[1].value = 3
 
     pdc_dict = pdc.dict()
-    # import pdb; pdb.set_trace()
     assert pdc_dict["value"] == 1
     assert pdc_dict["nested"]["energy"] == -74.964814
     assert pdc_dict["nested_list"][0]["value"] == 2

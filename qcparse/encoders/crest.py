@@ -8,7 +8,13 @@ from qcio import CalcType, ProgramInput
 from qcparse.exceptions import EncoderError
 from qcparse.models import NativeInput
 
-SUPPORTED_CALCTYPES = {CalcType.conformer_search}
+SUPPORTED_CALCTYPES = {
+    CalcType.conformer_search,
+    CalcType.optimization,
+    CalcType.energy,
+    CalcType.gradient,
+    CalcType.hessian,
+}
 
 
 def encode(inp_obj: ProgramInput) -> NativeInput:
@@ -42,13 +48,47 @@ def validate_input(inp_obj: ProgramInput):
     """
     # These values come from other parts of the ProgramInput and should not be set
     # in the keywords.
-    non_allowed_keywords = ["charge", "uhf", "runtype"]
+    non_allowed_keywords = ["charge", "uhf"]
     for keyword in non_allowed_keywords:
         if keyword in inp_obj.keywords:
             raise EncoderError(
                 f"{keyword} should not be set in keywords for CREST. It is already set "
                 "on the Structure or ProgramInput elsewhere.",
             )
+    if "runtype" in inp_obj.keywords:
+        _validate_runtype_calctype(inp_obj.keywords["runtype"], inp_obj.calctype)
+
+
+def _validate_runtype_calctype(runtype: str, calctype: CalcType):
+    """Validate that the runtype is supported for the calctype."""
+    invalid_runtype = False
+    valid_runtypes = set()
+
+    if calctype == CalcType.conformer_search:
+        valid_runtypes = {"imtd-gc", "imtd-smtd", "entropy", "nci", "nci-mtd"}
+        if runtype not in valid_runtypes:
+            invalid_runtype = True
+
+    elif calctype == CalcType.optimization:
+        valid_runtypes = {"optimize", "ancopt"}
+        if runtype not in valid_runtypes:
+            invalid_runtype = True
+
+    elif calctype in {CalcType.energy, CalcType.gradient}:
+        valid_runtypes = {"singlepoint"}
+        if runtype not in valid_runtypes:
+            invalid_runtype = True
+
+    elif calctype == CalcType.hessian:
+        valid_runtypes = {"numhess"}
+        if runtype not in valid_runtypes:
+            invalid_runtype = True
+
+    if invalid_runtype:
+        raise EncoderError(
+            f"Unsupported runtype {runtype} for calctype {calctype}. Valid runtypes "
+            f"are: {valid_runtypes}.",
+        )
 
 
 def _to_toml_dict(inp_obj: ProgramInput, struct_filename: str) -> Dict[str, Any]:
@@ -64,8 +104,20 @@ def _to_toml_dict(inp_obj: ProgramInput, struct_filename: str) -> Dict[str, Any]
     toml_dict.setdefault("threads", os.cpu_count())
     toml_dict["input"] = struct_filename
 
-    # TODO: May need to deal with non-covalent mode at some point
-    toml_dict["runtype"] = "imtd-gc"
+    # Set default runtype if not already set
+    if "runtype" not in inp_obj.keywords:
+        if inp_obj.calctype == CalcType.conformer_search:
+            toml_dict["runtype"] = "imtd-gc"
+        elif inp_obj.calctype == CalcType.optimization:
+            toml_dict["runtype"] = "optimize"
+        elif inp_obj.calctype in {CalcType.energy, CalcType.gradient}:
+            toml_dict["runtype"] = "singlepoint"
+        elif inp_obj.calctype == CalcType.hessian:
+            toml_dict["runtype"] = "numhess"
+        else:
+            raise EncoderError(
+                f"Unsupported calctype {inp_obj.calctype} for CREST encoder.",
+            )
 
     # Calculation level keywords
     calculation = toml_dict.pop("calculation", {})
