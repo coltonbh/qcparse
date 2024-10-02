@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [unreleased]
 
+## [0.6.4] - 2024-10-01
+
 ### Added
 
 - Encoders and parsers for CREST to support `energy`, `gradient`, `hessian`, and `optimization` calculations.
@@ -130,7 +132,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Can return either `AtomicResult` or `FailedOperation` objects depending on whether calculation succeeded or failed.
 - Tests for all parsers and the main `parse` function.
 
-[unreleased]: https://github.com/coltonbh/qcparse/compare/0.6.3...HEAD
+[unreleased]: https://github.com/coltonbh/qcparse/compare/0.6.4...HEAD
+[0.6.4]: https://github.com/coltonbh/qcparse/releases/tag/0.6.4
 [0.6.3]: https://github.com/coltonbh/qcparse/releases/tag/0.6.3
 [0.6.2]: https://github.com/coltonbh/qcparse/releases/tag/0.6.2
 [0.6.1]: https://github.com/coltonbh/qcparse/releases/tag/0.6.1
