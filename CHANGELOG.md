@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [unreleased]
 
+### Added
+
+- Encoders and parsers for CREST to support `energy`, `gradient`, `hessian`, and `optimization` calculations.
+
 ## [0.6.3] - 2024-09-12
 
 ### Added
