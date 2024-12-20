@@ -4,7 +4,7 @@ import functools
 import warnings
 from importlib import import_module
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import Optional, Union
 
 from qcio import CalcType, ProgramInput, SinglePointResults
 
@@ -57,7 +57,7 @@ def parse(
         calctype = calctype if calctype else parsers.parse_calctype(file_content)
 
     # Get all the parsers for the program, filetype, and calctype
-    parser_specs: List[ParserSpec] = registry.get_parsers(program, filetype, calctype)
+    parser_specs: list[ParserSpec] = registry.get_parsers(program, filetype, calctype)
 
     # Create a SinglePointResult namespace object to collect the parsed data
     data_collector = single_point_results_namespace()

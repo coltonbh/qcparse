@@ -1,6 +1,6 @@
 import copy
 import os
-from typing import Any, Dict
+from typing import Any
 
 import tomli_w
 from qcio import CalcType, ProgramInput
@@ -91,7 +91,7 @@ def _validate_runtype_calctype(runtype: str, calctype: CalcType):
         )
 
 
-def _to_toml_dict(inp_obj: ProgramInput, struct_filename: str) -> Dict[str, Any]:
+def _to_toml_dict(inp_obj: ProgramInput, struct_filename: str) -> dict[str, Any]:
     """Convert a ProgramInput object to a dictionary in the CREST format of TOML.
 
     This function makes it easier to test for the correct TOML structure.

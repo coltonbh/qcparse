@@ -3,7 +3,7 @@
 from collections import defaultdict
 from enum import Enum
 from types import SimpleNamespace
-from typing import Callable, Dict, List, Optional
+from typing import Callable, Optional
 
 from pydantic import BaseModel, model_validator
 from qcio import CalcType
@@ -26,13 +26,13 @@ class ParserSpec(BaseModel):
     parser: Callable
     filetype: str
     required: bool
-    calctypes: List[CalcType]
+    calctypes: list[CalcType]
 
 
 class ParserRegistry(BaseModel):
     """Registry for parser functions."""
 
-    registry: Dict[str, List[ParserSpec]] = defaultdict(list)
+    registry: dict[str, list[ParserSpec]] = defaultdict(list)
 
     def register(self, program: str, parser_spec: ParserSpec) -> None:
         """Register a new parser function.
@@ -49,7 +49,7 @@ class ParserRegistry(BaseModel):
         program: str,
         filetype: Optional[str] = None,
         calctype: Optional[CalcType] = None,
-    ) -> List[ParserSpec]:
+    ) -> list[ParserSpec]:
         """Get all parser functions for a given program.
 
         Args:
@@ -61,7 +61,7 @@ class ParserRegistry(BaseModel):
             List of ParserSpec objects.
         """
 
-        parser_specs: List[ParserSpec] = self.registry[program]
+        parser_specs: list[ParserSpec] = self.registry[program]
         if not parser_specs:
             raise RegistryError(f"No parsers registered for program '{program}'.")
 
@@ -73,7 +73,7 @@ class ParserRegistry(BaseModel):
             parser_specs = [ps for ps in parser_specs if calctype in ps.calctypes]
         return parser_specs
 
-    def supported_programs(self) -> List[str]:
+    def supported_programs(self) -> list[str]:
         """Get all programs with registered parsers.
 
         Returns:
@@ -81,7 +81,7 @@ class ParserRegistry(BaseModel):
         """
         return list(self.registry.keys())
 
-    def supported_filetypes(self, program: str) -> List[str]:
+    def supported_filetypes(self, program: str) -> list[str]:
         """Get all filetypes for a given program.
 
         Args:
@@ -91,9 +91,9 @@ class ParserRegistry(BaseModel):
             List of filetypes.
         """
         return list(
-            set(
-                [str(parser_info.filetype) for parser_info in self.get_parsers(program)]
-            )
+            {
+                str(parser_info.filetype) for parser_info in self.get_parsers(program)
+            }
         )
 
 
@@ -126,7 +126,7 @@ class ParsedDataCollector(SimpleNamespace):
             )
         super().__setattr__(name, value)
 
-    def dict(self) -> Dict:
+    def dict(self) -> dict:
         """Convert the namespace to a dictionary, including nested objects."""
         return {
             key: (

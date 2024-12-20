@@ -9,19 +9,17 @@ repository = "https://github.com/coltonbh/qcparse"
 homepage = "https://github.com/coltonbh/qcparse"
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.9"
 pydantic = ">=2.0.0"
 qcio = "^0.11.8"
 tomli-w = "^1.0.0"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.1.1"
-isort = "^5.12.0"
 pytest = "^7.2.2"
 pre-commit = "^3.2.0"
 pytest-cov = "^4.0.0"
-black = ">=24.0.0"
-ruff = "^0.0.275"
+ruff = "^0.8.3"
 types-toml = "^0.10.8.20240310"
 
 [tool.poetry.scripts]
@@ -34,15 +32,13 @@ build-backend = "poetry.core.masonry.api"
 [tool.pytest.ini_options]
 testpaths = "tests/"
 
-[tool.black]
+[tool.ruff]
 line-length = 88
+target-version = "py39"
 
-[tool.isort]
-force_grid_wrap = 0
-include_trailing_comma = true
-line_length = 88
-multi_line_output = 3
-use_parentheses = true
+[tool.ruff.lint]
+isort = { known-first-party = ["qcparse", "tests"] }
+select = ["I", "F401"]
 
 [tool.coverage.run]
 branch = true

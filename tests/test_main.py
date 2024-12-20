@@ -20,7 +20,7 @@ def test_main_terachem_encoder(prog_inp):
     prog_inp = prog_inp("energy")
     native_input = encode(prog_inp, "terachem")
     correct_tcin = (
-        f"{'run':<{terachem.PADDING}} {prog_inp.calctype}\n"
+        f"{'run':<{terachem.PADDING}} {prog_inp.calctype.value}\n"
         f"{'coordinates':<{terachem.PADDING}} {terachem.XYZ_FILENAME}\n"
         f"{'charge':<{terachem.PADDING}} {prog_inp.structure.charge}\n"
         f"{'spinmult':<{terachem.PADDING}} {prog_inp.structure.multiplicity}\n"

@@ -1,7 +1,7 @@
 import importlib
 import inspect
 import re
-from typing import List, Optional
+from typing import Optional
 
 from qcio import CalcType
 
@@ -13,7 +13,7 @@ def parser(
     filetype: str = FileType.stdout,
     *,
     required: bool = True,
-    only: Optional[List[CalcType]] = None,
+    only: Optional[list[CalcType]] = None,
 ):
     """Decorator to register a function as a parser.
 

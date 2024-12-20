@@ -201,7 +201,7 @@ def test_write_input_files(prog_inp):
     # 4. Keywords (test booleans to lower case, ints, sts, floats)
 
     correct_tcin = (
-        f"{'run':<{PADDING}} {prog_inp.calctype}\n"
+        f"{'run':<{PADDING}} {prog_inp.calctype.value}\n"
         f"{'coordinates':<{PADDING}} {XYZ_FILENAME}\n"
         f"{'charge':<{PADDING}} {prog_inp.structure.charge}\n"
         f"{'spinmult':<{PADDING}} {prog_inp.structure.multiplicity}\n"
