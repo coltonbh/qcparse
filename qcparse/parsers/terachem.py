@@ -2,7 +2,7 @@
 
 import re
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import Optional, Union
 
 from qcio import (
     CalcType,
@@ -48,7 +48,7 @@ def parse_energy(string: str, data_collector: ParsedDataCollector):
     data_collector.energy = float(regex_search(regex, string).group(1))
 
 
-def parse_gradients(string: str, all: bool = True) -> List[List[List[float]]]:
+def parse_gradients(string: str, all: bool = True) -> list[list[list[float]]]:
     """Parse gradients from TeraChem stdout.
 
     Args:
@@ -64,14 +64,14 @@ def parse_gradients(string: str, all: bool = True) -> List[List[List[float]]]:
     regex = r"(?<=dE\/dX\s{12}dE\/dY\s{12}dE\/dZ\n)[\d\.\-\s]+(?=\n(?:--|-=))"
 
     if all is True:
-        match: Optional[Union[List, re.Match]] = re.findall(regex, string)
+        match: Optional[Union[list, re.Match]] = re.findall(regex, string)
     else:
         match = re.search(regex, string)
 
     if not match:
         raise MatchNotFoundError(regex, string)
 
-    grad_strings: List[str] = match if all is True else [match.group()]  # type: ignore
+    grad_strings: list[str] = match if all is True else [match.group()]  # type: ignore
 
     gradients = []
 
@@ -211,7 +211,7 @@ def parse_optimization_dir(
     program_version = parse_version_string(stdout)
 
     # Create the trajectory
-    trajectory: List[ProgramOutput] = [
+    trajectory: list[ProgramOutput] = [
         ProgramOutput(
             input_data=ProgramInput(
                 calctype=CalcType.gradient,

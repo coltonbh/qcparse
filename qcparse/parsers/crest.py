@@ -1,6 +1,6 @@
 import re
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Optional, Union
 
 import numpy as np
 from qcio import (
@@ -31,7 +31,7 @@ def parse_structures(
     filename: Union[Path, str],
     charge: Optional[int] = None,
     multiplicity: Optional[int] = None,
-) -> List[Structure]:
+) -> list[Structure]:
     """Parse Structures from a CREST multi-structure xyz file.
 
     CREST places an energy value in the comments line of each structure. This function
@@ -160,7 +160,7 @@ def parse_numhess_dir(
     float_regex = r"[-+]?\d*\.\d+|\d+"
     numbers = re.findall(float_regex, data)
     array = np.array(numbers, dtype=float)
-    spr_dict: Dict[str, Any] = {"hessian": array}
+    spr_dict: dict[str, Any] = {"hessian": array}
     if stdout:
         energy_regex = r"Energy\s*=\s*([-+]?\d+\.\d+)\s*Eh"
         energy = float(regex_search(energy_regex, stdout).group(1))
@@ -212,7 +212,7 @@ def parse_optimization_dir(
         final_spr = SinglePointResults(gradient=fake_gradient)
 
     # Create the optimization trajectory
-    trajectory: List[ProgramOutput] = [
+    trajectory: list[ProgramOutput] = [
         ProgramOutput(
             input_data=ProgramInput(
                 calctype=CalcType.gradient,
