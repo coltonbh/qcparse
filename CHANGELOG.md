@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [unreleased]
 
+### Changed
+
+- More flexibly defined `qcio` dependency version from `^0.11.8` to `>=0.12.1` to account for the missing `eval_type_backport` package.
+
 ## [0.7.0] - 2024-12-20
 
 ### Changed
