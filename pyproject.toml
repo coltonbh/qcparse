@@ -11,7 +11,7 @@ homepage = "https://github.com/coltonbh/qcparse"
 [tool.poetry.dependencies]
 python = "^3.9"
 pydantic = ">=2.0.0"
-qcio = "^0.11.8"
+qcio = ">=0.12.1"
 tomli-w = "^1.0.0"
 
 [tool.poetry.group.dev.dependencies]

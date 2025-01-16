@@ -6,7 +6,6 @@ on:
       - "*" # Match any tag
   workflow_dispatch: # Enable manual triggering
 
-
 jobs:
   create-release:
     name: Create GitHub Release
