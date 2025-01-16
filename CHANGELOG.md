@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [unreleased]
 
+## [0.7.1] - 2025-01-15
+
 ### Changed
 
 - More flexibly defined `qcio` dependency version from `^0.11.8` to `>=0.12.1` to account for the missing `eval_type_backport` package.
@@ -146,7 +148,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Can return either `AtomicResult` or `FailedOperation` objects depending on whether calculation succeeded or failed.
 - Tests for all parsers and the main `parse` function.
 
-[unreleased]: https://github.com/coltonbh/qcparse/compare/0.7.0...HEAD
+[unreleased]: https://github.com/coltonbh/qcparse/compare/0.7.1...HEAD
+[0.7.1]: https://github.com/coltonbh/qcparse/releases/tag/0.7.1
 [0.7.0]: https://github.com/coltonbh/qcparse/releases/tag/0.7.0
 [0.6.4]: https://github.com/coltonbh/qcparse/releases/tag/0.6.4
 [0.6.3]: https://github.com/coltonbh/qcparse/releases/tag/0.6.3
