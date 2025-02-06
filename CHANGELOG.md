@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [unreleased]
 
+### Added
+
+- Parse CREST's `numhess` g98.out file for frequency and normal mode displacement vectors.
+
 ## [0.7.1] - 2025-01-15
 
 ### Changed
