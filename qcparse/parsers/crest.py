@@ -12,6 +12,7 @@ from qcio import (
     Provenance,
     SinglePointResults,
     Structure,
+    constants,
 )
 
 from .utils import regex_search
@@ -141,6 +142,60 @@ def parse_singlepoint_dir(
     return parse_energy_grad(text)
 
 
+def parse_g98_text(text: str) -> dict[str, Any]:
+    """Parse the Gaussian98 output text for frequencies and cartesian displacements.
+
+    Args:
+        text: The text of the Gaussian98 output file.
+
+    Returns:
+        The parsed frequencies and normal mode displacements as a dictionary.
+    """
+    # Break up the text into blocks, each of which contains the frequencies and
+    # normal mode displacements for up to three modes
+    block_re = re.compile(r"(Frequencies --.*?)(?=Frequencies --|$)", re.DOTALL)
+    blocks = block_re.findall(text)
+    freqs_wavenumber = []
+
+    # Extract frequencies and normal mode displacements from each block
+    for block in blocks:
+        lines = block.split("\n")
+        # Collect frequencies from the first line
+        freqs = [float(x) for x in lines[0].split()[2:]]
+        freqs_wavenumber.extend(freqs)
+
+        # Collect Cartesian Displacements
+        # Start with line 7 because this is where the displacements start
+        displacements = lines[7:]
+        mode_disp: list[list[list[float]]] = [[] for _ in freqs]
+
+        for line in displacements:
+            # Get all numbers in the line (as strings).
+            regex = r"[-+]?\d*\.\d+|[-+]?\d+"
+            tokens = re.findall(regex, line)
+            # We expect at least 2 + 3*len(freqs) numbers. If not, skip this line
+            # because it is a header line for the subsequent block.
+            if len(tokens) < 2 + 3 * len(freqs):
+                continue
+
+            # The first two tokens are atom index and atomic number; the rest are displacements.
+            disp_values = tokens[2 : 2 + 3 * len(freqs)]
+
+            # For each mode, extract the x, y, z displacements
+            for i in range(len(freqs)):
+                base = 3 * i
+                x, y, z = map(float, disp_values[base : base + 3])
+                mode_disp[i].append([x, y, z])
+
+    # Convert displacement from Angstrom to Bohr
+    normal_modes_cartesian = np.array(mode_disp) * constants.ANGSTROM_TO_BOHR
+
+    return {
+        "freqs_wavenumber": freqs_wavenumber,
+        "normal_modes_cartesian": normal_modes_cartesian,
+    }
+
+
 def parse_numhess_dir(
     directory: Union[Path, str],
     filename: str = "numhess1",
@@ -156,11 +211,19 @@ def parse_numhess_dir(
     Returns:
         The parsed numerical Hessian results as a SinglePointResults object.
     """
-    data = (Path(directory) / filename).read_text()
+    # Parse the Hessian matrix
+    numhess_data = (Path(directory) / filename).read_text()
     float_regex = r"[-+]?\d*\.\d+|\d+"
-    numbers = re.findall(float_regex, data)
+    numbers = re.findall(float_regex, numhess_data)
     array = np.array(numbers, dtype=float)
     spr_dict: dict[str, Any] = {"hessian": array}
+
+    # Parse the frequency data from g98.out
+    g98_text = (Path(directory) / "g98.out").read_text()
+    parsed_g98 = parse_g98_text(g98_text)
+    spr_dict = {**spr_dict, **parsed_g98}
+
+    # Parse the energy if available
     if stdout:
         energy_regex = r"Energy\s*=\s*([-+]?\d+\.\d+)\s*Eh"
         energy = float(regex_search(energy_regex, stdout).group(1))

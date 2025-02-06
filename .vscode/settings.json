@@ -5,6 +5,8 @@
         "calctype",
         "calctypes",
         "CUDA",
+        "disp",
+        "freqs",
         "Hartree",
         "htmlcov",
         "maxiter",
@@ -12,6 +14,7 @@
         "natoms",
         "ndarray",
         "nocuda",
+        "numhess",
         "optim",
         "pathconf",
         "psutil",
@@ -29,6 +32,7 @@
         "tcstdout",
         "tensorbox",
         "Tera",
-        "terachem"
+        "terachem",
+        "wavenumber"
     ]
 }
