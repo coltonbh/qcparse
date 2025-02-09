@@ -195,4 +195,12 @@ def test_parse_g98_text(test_data_dir):
     spr_dict = parse_g98_text(text)
     assert spr_dict["freqs_wavenumber"] == [3533.1374]
     np.testing.assert_array_almost_equal(spr_dict["normal_modes_cartesian"], np.array([[[-0.41573975, 0.0, 0.0], [1.83303434, 0.0, 0.0]]]), decimal=1e-7)
+
+    # Non multiple of 3 normal modes
+    text = (test_data_dir / "crest_output" / "g98big.out").read_text()
+    spr_dict = parse_g98_text(text)
+    assert spr_dict["freqs_wavenumber"] == [-335.2821, 75.3406, 87.4971, 152.4883, 180.0606, 191.074, 219.3003, 246.2166, 278.5267, 280.7177, 359.0875, 382.8016, 449.069, 545.5556, 611.7482, 640.0248, 825.2501, 889.7146, 927.2648, 935.9104, 965.7738, 971.4924, 1066.8035, 1085.231, 1146.0758, 1210.0312, 1325.697, 1354.3222, 1377.8921, 1388.152, 1409.9827, 1415.4545, 1977.5598, 2058.9146, 2600.6465, 2992.0603, 2997.6282, 3014.3359, 3047.3809, 3083.5006, 3090.5364, 3205.2305]
+    # np.testing.assert_array_almost_equal(spr_dict["normal_modes_cartesian"], np.array([[[-0.41573975, 0.0, 0.0], [1.83303434, 0.0, 0.0]]]), decimal=1e-7)
+    parsed_g98big = np.load(test_data_dir / "crest_g98big_normal_modes.npy")
+    np.testing.assert_array_equal(spr_dict["normal_modes_cartesian"],parsed_g98big) 
     # fmt: on

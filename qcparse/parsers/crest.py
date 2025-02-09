@@ -156,6 +156,7 @@ def parse_g98_text(text: str) -> dict[str, Any]:
     block_re = re.compile(r"(Frequencies --.*?)(?=Frequencies --|$)", re.DOTALL)
     blocks = block_re.findall(text)
     freqs_wavenumber = []
+    normal_modes_cartesian = []
 
     # Extract frequencies and normal mode displacements from each block
     for block in blocks:
@@ -186,13 +187,14 @@ def parse_g98_text(text: str) -> dict[str, Any]:
                 base = 3 * i
                 x, y, z = map(float, disp_values[base : base + 3])
                 mode_disp[i].append([x, y, z])
+        normal_modes_cartesian.extend(mode_disp)
 
     # Convert displacement from Angstrom to Bohr
-    normal_modes_cartesian = np.array(mode_disp) * constants.ANGSTROM_TO_BOHR
+    as_np_array = np.array(normal_modes_cartesian) * constants.ANGSTROM_TO_BOHR
 
     return {
         "freqs_wavenumber": freqs_wavenumber,
-        "normal_modes_cartesian": normal_modes_cartesian,
+        "normal_modes_cartesian": as_np_array,
     }
 
 

@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [unreleased]
 
+### Fixed
+
+- Bug in parsing CREST's `g98.out` file for more than three frequencies.
+
 ## [0.7.2] - 2025-02-05
 
 ### Added
