@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [unreleased]
 
+### Changed
+
+- CREST encoder now selects `min(os.cpu_count(), 16)` for `threads` if not set by the user.
+
 ## [0.7.3] - 2025-02-08
 
 ### Fixed
