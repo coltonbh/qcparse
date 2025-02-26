@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [unreleased]
 
+## [0.7.4] - 2025-02-25
+
 ### Changed
 
 - CREST encoder now selects `min(os.cpu_count(), 16)` for `threads` if not set by the user.
@@ -164,7 +166,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Can return either `AtomicResult` or `FailedOperation` objects depending on whether calculation succeeded or failed.
 - Tests for all parsers and the main `parse` function.
 
-[unreleased]: https://github.com/coltonbh/qcparse/compare/0.7.3...HEAD
+[unreleased]: https://github.com/coltonbh/qcparse/compare/0.7.4...HEAD
+[0.7.4]: https://github.com/coltonbh/qcparse/releases/tag/0.7.4
 [0.7.3]: https://github.com/coltonbh/qcparse/releases/tag/0.7.3
 [0.7.2]: https://github.com/coltonbh/qcparse/releases/tag/0.7.2
 [0.7.1]: https://github.com/coltonbh/qcparse/releases/tag/0.7.1
