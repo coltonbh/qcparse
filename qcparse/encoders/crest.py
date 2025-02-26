@@ -101,7 +101,7 @@ def _to_toml_dict(inp_obj: ProgramInput, struct_filename: str) -> dict[str, Any]
 
     # Top level keywords
     # Logical cores was 10% faster than physical cores, so not using psutil
-    toml_dict.setdefault("threads", os.cpu_count())
+    toml_dict.setdefault("threads", min(os.cpu_count() or 16, 16))
     toml_dict["input"] = struct_filename
 
     # Set default runtype if not already set
