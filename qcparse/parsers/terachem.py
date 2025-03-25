@@ -4,6 +4,7 @@ import re
 from pathlib import Path
 from typing import Optional, Union
 
+from qcconst import constants
 from qcio import (
     CalcType,
     OptimizationResults,
@@ -46,6 +47,36 @@ def parse_energy(string: str, data_collector: ParsedDataCollector):
     """
     regex = r"FINAL ENERGY: (-?\d+(?:\.\d+)?)"
     data_collector.energy = float(regex_search(regex, string).group(1))
+
+
+def parse_excited_states(string: str):
+    """Parse the excited state information from a TDDFT TeraChem stdout.
+    Creates a list of matches. One for each computed excited state.
+    Each match is a dictionary with keys corresponding to the columns of excited state information at the end of a TDDFT TeraChem stdout.
+    """
+    regex = r"^\s*(?:\d+)\s+(?P<energy>-?\d+\.\d+)\s+(?P<exc_energy>-?\d+\.\d+)\s+(?P<osc_strength>-?\d+\.\d+)\s+(?P<s_squared>-?\d+\.\d+)\s+(?P<max_ci_coeff>-?\d+\.\d+)\s+(?P<excitation>\d+\s+->\s+\d+\s+:\s+\w+\s+->\s+\w+)$"
+    
+    matches = re.finditer(regex, string, re.MULTILINE)
+    
+    # Create list to add each excited state to
+    excited_states = []
+    for match in matches:
+        # Convert the match object to a dictionary of named groups
+        state_data = match.groupdict()
+        
+        # Convert numeric values to floats
+        for key in ['energy', 'exc_energy', 'osc_strength', 's_squared', 'max_ci_coeff']:
+            if key == "exc_energy":
+                state_data[key] = float(state_data[key]) * constants.EV_TO_HARTREE
+            else:
+                state_data[key] = float(state_data[key])
+        
+        excited_states.append(state_data)
+    
+    if not excited_states:
+        raise MatchNotFoundError(regex, string)
+    
+    return excited_states
 
 
 def parse_gradients(string: str, all: bool = True) -> list[list[list[float]]]:

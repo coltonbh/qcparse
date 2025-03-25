@@ -7,6 +7,7 @@ from qcparse.parsers.terachem import (
     calculation_succeeded,
     parse_calctype,
     parse_energy,
+    parse_excited_states,
     parse_gradient,
     parse_gradients,
     parse_hessian,
@@ -17,7 +18,7 @@ from qcparse.parsers.terachem import (
     parse_version_string,
 )
 
-from .data import gradients, hessians
+from .data import excited_states, gradients, hessians
 
 
 @pytest.mark.parametrize(
@@ -58,6 +59,7 @@ def test_parse_energy_raises_exception(data_collector):
     "filename,calctype",
     (
         ("water.energy.out", CalcType.energy),
+        ("water.tddft.out", CalcType.energy),
         ("water.gradient.out", CalcType.gradient),
         ("water.frequencies.out", CalcType.hessian),
     ),
@@ -242,6 +244,43 @@ def test_encode_raises_error_qcio_args_passes_as_keywords(prog_inp):
         prog_inp.keywords[keyword] = "some value"
         with pytest.raises(EncoderError):
             encode(prog_inp)
+
+
+@pytest.mark.parametrize(
+    "filename,excited_states",
+    (
+        # (
+        #     "water.tddft.out",
+        #     excited_states.water,
+        # ),
+        (
+            "caffeine.tddft.out",
+            excited_states.caffeine,
+        ),
+    ),
+)
+def test_parse_excited_states(test_data_dir, filename, excited_states):
+    """
+    Tests the parse_excited_states function to ensure that it correctly parses
+    excited states from TDDFT output files.
+    """
+    with open(test_data_dir / filename) as f:
+        tcout = f.read()
+    
+    parsed_excited_states = parse_excited_states(tcout)
+    assert parsed_excited_states == excited_states
+
+
+def test_parse_excited_states_raises_exception_no_excited_states(test_data_dir):
+    """
+    Tests the parse_excited_states function to ensure that it correctly raises
+    an exception when no excited states are found in the output file.
+    """
+    with open(test_data_dir / "water.energy.out") as f:
+        tcout = f.read()
+
+    with pytest.raises(MatchNotFoundError):
+        parse_excited_states(tcout)
 
 
 def test_parse_gradients(test_data_dir):
