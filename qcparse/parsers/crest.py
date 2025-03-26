@@ -1,11 +1,11 @@
 import re
+from enum import Enum
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any, Generator, Optional, Tuple, Union
 
 import numpy as np
 from qcio import (
     CalcType,
-    ConformerSearchResults,
     OptimizationResults,
     ProgramInput,
     ProgramOutput,
@@ -15,10 +15,60 @@ from qcio import (
     constants,
 )
 
-from .utils import regex_search
+from .utils import regex_search, register
 
 
-def parse_version_string(string: str) -> str:
+class FileType(str, Enum):
+    """CREST filetypes.
+
+    Maps file types to their names as written in the CREST output directory (except
+    for STDOUT and DIRECTORY).
+    """
+
+    STDOUT = "stdout"
+    DIRECTORY = "directory"
+    NUMHESS = "numhess1"
+    G98 = "g98.out"
+    ENGRAD = "crest.engrad"
+    OPTLOG = "crestopt.log"
+
+
+def iter_files(
+    stdout: Optional[str], directory: Optional[Union[Path, str]]
+) -> Generator[Tuple[FileType, Union[str, bytes]], None, None]:
+    """
+    Iterate over the files in a CREST output directory.
+
+    If stdout is provided, yields a tuple for it.
+
+    If directory is provided, iterates over the directory to yield files according to
+    program-specific logic.
+
+    Args:
+        stdout: The contents of the CREST stdout file.
+        directory: The path to the directory containing the CREST output files.
+
+    Yields:
+        (FileType, contents) tuples for a program's output.
+    """
+    if stdout is not None:
+        yield FileType.STDOUT, stdout
+
+    if directory is not None:
+        for file in directory.iterdir():
+            if file.is_file():
+                if file.name == FileType.G98.value:
+                    yield FileType.G98, file.read_text()
+                elif file.name == FileType.NUMHESS.value:
+                    yield FileType.NUMHESS, file.read_text()
+                elif file.name == FileType.ENGRAD.value:
+                    yield FileType.ENGRAD, file.read_text()
+                elif file.name == FileType.OPTLOG.value:
+                    yield FileType.OPTLOG, file.read_text()
+
+
+@register(filetype=FileType.STDOUT, target=("extras", "program_version"))
+def parse_version(string: str) -> str:
     """Parse version string from CREST stdout.
 
     Matches format of 'crest --version' on command line.
@@ -28,121 +78,189 @@ def parse_version_string(string: str) -> str:
     return match.group(1)
 
 
-def parse_structures(
-    filename: Union[Path, str],
-    charge: Optional[int] = None,
-    multiplicity: Optional[int] = None,
-) -> list[Structure]:
-    """Parse Structures from a CREST multi-structure xyz file.
-
-    CREST places an energy value in the comments line of each structure. This function
-    collects all Structures and their energies from the file into AnnotatedStructure
-    objects.
+@register(filetype=FileType.DIRECTORY, calctypes=[CalcType.conformer_search])
+def parse_conformers(
+    directory: Union[Path, str], stdout: Optional[str], input_data: ProgramInput
+) -> dict[str, Any]:
+    """Parse the conformers from the output directory of a CREST conformer search calculation.
 
     Args:
-        filename: The path to the multi-structure xyz file.
-        charge: The charge of the structures.
-        multiplicity: The multiplicity of the structures.
-
-    Returns:
-        A list of Structure objects.
-    """
-    try:
-        structures = Structure.open(filename, charge=charge, multiplicity=multiplicity)
-        if not isinstance(structures, list):  # single structure
-            structures = [structures]
-    except FileNotFoundError:
-        structures = []  # No structures created
-    return structures
-
-
-def parse_conformer_search_dir(
-    directory: Union[Path, str],
-    *,
-    charge: Optional[int] = None,
-    multiplicity: Optional[int] = None,
-    collect_rotamers: bool = True,
-) -> ConformerSearchResults:
-    """Parse the output directory of a CREST conformer search calculation.
-
-    Args:
+        stdout: The contents of the CREST stdout file (not used).
         directory: Path to the directory containing the CREST output files.
-        charge: The charge of the structures.
-        multiplicity: The multiplicity of the structures.
-        collect_rotamers: Whether to parse rotamers as well as conformers.
+        input_data: The input object used for the calculation
 
     Returns:
-        The parsed conformers, rotamers, and their energies as a ConformerSearchResults
-        object.
+        The parsed conformers and their energies as a dictionary.
     """
     directory = Path(directory)
-    conformers = parse_structures(
-        directory / "crest_conformers.xyz", charge=charge, multiplicity=multiplicity
+    conformers = Structure.open_multi(
+        directory / "crest_conformers.xyz",
+        charge=input_data.structure.charge,
+        multiplicity=input_data.structure.multiplicity,
     )
 
     # CREST places the energy as the only value in the comment line
-    conf_energies = [conf.extras[Structure._xyz_comment_key][0] for conf in conformers]
+    conf_energies = [
+        float(conf.extras[Structure._xyz_comment_key][0]) for conf in conformers
+    ]
 
-    rotamers = []
-    if collect_rotamers:
-        rotamers = parse_structures(
-            directory / "crest_rotamers.xyz", charge=charge, multiplicity=multiplicity
-        )
+    # Add identifiers to the conformers if topo is unchanged
+    _add_identifiers_to_structures(conformers, input_data)
 
-    # CREST places the energy as the only value in the comment line
-    rotamer_energies = [rot.extras[Structure._xyz_comment_key][0] for rot in rotamers]
+    return {
+        "conformers": conformers,
+        "conformer_energies": np.array(conf_energies),
+    }
 
-    return ConformerSearchResults(
-        conformers=conformers,
-        conformer_energies=np.array(conf_energies),
-        rotamers=rotamers,
-        rotamer_energies=np.array(rotamer_energies),
+
+@register(filetype=FileType.DIRECTORY, calctypes=[CalcType.conformer_search])
+def parse_rotamers(
+    directory: Union[Path, str], stdout: Optional[str], input_data: ProgramInput
+) -> dict[str, Any]:
+    """Parse the rotamers from the output directory of a CREST conformer search calculation.
+
+    Args:
+        stdout: The contents of the CREST stdout file (not used).
+        directory: Path to the directory containing the CREST output files.
+        input_data: The input object used for the calculation
+
+    Returns:
+        The parsed rotamers and their energies as a dictionary.
+    """
+    directory = Path(directory)
+    rotamers = Structure.open_multi(
+        directory / "crest_rotamers.xyz",
+        charge=input_data.structure.charge,
+        multiplicity=input_data.structure.multiplicity,
     )
 
+    # CREST places the energy as the only value in the comment line
+    conf_energies = [
+        float(conf.extras[Structure._xyz_comment_key][0]) for conf in rotamers
+    ]
 
-def parse_energy_grad(text: str) -> SinglePointResults:
+    # Add identifiers to the rotamers if topo is unchanged
+    _add_identifiers_to_structures(rotamers, input_data)
+
+    return {
+        "rotamers": rotamers,
+        "rotamer_energies": np.array(conf_energies),
+    }
+
+
+def _add_identifiers_to_structures(
+    structures: list[Structure], input_data: ProgramInput
+) -> None:
+    """Add identifiers to a list of Structure objects if the 'topo' is unchanged."""
+    if input_data.keywords.get("topo", True):
+        ids = input_data.structure.identifiers.model_dump()
+        for struct in structures:
+            struct.add_identifiers(**ids)
+
+
+@register(
+    filetype=FileType.ENGRAD,
+    calctypes=[CalcType.energy, CalcType.gradient],
+    target="energy",
+)
+def parse_energy(contents: str) -> float:
     """Parse the output of a CREST energy and gradient calculation.
 
     Args:
-        text: The text of the output file.
+        contents: The text of the output file.
 
     Returns:
-        The parsed energy and gradient as a SinglePointResults object.
+        The parsed energy as a float.
     """
-    # Parse the energy
     energy_regex = r"# Energy \( Eh \)\n#*\n\s*([-\d.]+)"
+    return float(regex_search(energy_regex, contents).group(1))
+
+
+@register(
+    filetype=FileType.ENGRAD,
+    calctypes=[CalcType.energy, CalcType.gradient],
+    target="gradient",
+)
+def parse_gradient(contents: str) -> float:
+    """Parse the output of a CREST energy and gradient calculation.
+
+    Args:
+        contents: The text of the output file.
+
+    Returns:
+        The parsed gradient as a Nx3 list of lists of floats.
+    """
     gradient_regex = r"# Gradient \( Eh/a0 \)\n#\s*\n((?:\s*[-\d.]+\n)+)"
-
-    energy = float(regex_search(energy_regex, text).group(1))
-    gradient = np.array(
-        [float(x) for x in regex_search(gradient_regex, text).group(1).split()]
-    )
-    return SinglePointResults(
-        energy=energy,
-        gradient=gradient,
-    )
+    vals = [float(x) for x in regex_search(gradient_regex, contents).group(1).split()]
+    # Group the values into chunks of 3 (for x, y, z).
+    return [vals[i : i + 3] for i in range(0, len(vals), 3)]
 
 
-def parse_singlepoint_dir(
-    directory: Union[Path, str], filename: str = "crest.engrad"
+@register(filetype=FileType.STDOUT, calctypes=[CalcType.hessian], target="energy")
+def parse_energy_numhess(contents: str) -> SinglePointResults:
+    """Parse the initial singlepoint calculation energy from stdout.
+
+    Args:
+        contents: The text of the stdout file.
+
+    Returns:
+        The parsed energy.
+    """
+    energy_regex = r"Energy\s=\s*([-+]?\d+\.\d+)\s*Eh"
+    return float(regex_search(energy_regex, contents).group(1))
+
+
+@register(filetype=FileType.NUMHESS, calctypes=[CalcType.hessian], target="hessian")
+def parse_numhess1(contents: str) -> list[list[float]]:
+    """Parse the numerical Hessian from the CREST numhess1 file.
+
+    Args:
+        contents: The text of the numhess1 file.
+
+    Returns:
+        The parsed Hessian as a list of lists of floats.
+    """
+    float_regex = r"[-]?\d*\.\d+|\d+"
+    numbers = re.findall(float_regex, contents)
+    return np.array(numbers, dtype=float)
+
+def parse_numhess_dir(
+    directory: Union[Path, str],
+    filename: str = "numhess1",
+    stdout: Optional[str] = None,
 ) -> SinglePointResults:
-    """Parse the output directory of a CREST single point calculation.
+    """Parse the output directory of a CREST numerical Hessian calculation.
 
     Args:
         directory: Path to the directory containing the CREST output files.
-        filename: The name of the file containing the single point results.
-            Default is 'crest.engrad'.
+        filename: The name of the file containing the numerical Hessian results.
+            Default is 'numhess1'.
 
     Returns:
-        The parsed single point results as a SinglePointResults object.
+        The parsed numerical Hessian results as a SinglePointResults object.
     """
-    directory = Path(directory)
-    text = (directory / filename).read_text()
+    # Parse the Hessian matrix
+    numhess_data = (Path(directory) / filename).read_text()
+    float_regex = r"[-+]?\d*\.\d+|\d+"
+    numbers = re.findall(float_regex, numhess_data)
+    array = np.array(numbers, dtype=float)
+    spr_dict: dict[str, Any] = {"hessian": array}
 
-    return parse_energy_grad(text)
+    # Parse the frequency data from g98.out
+    g98_text = (Path(directory) / "g98.out").read_text()
+    parsed_g98 = parse_g98(g98_text)
+    spr_dict = {**spr_dict, **parsed_g98}
+
+    # Parse the energy if available
+    if stdout:
+        energy_regex = r"Energy\s*=\s*([-+]?\d+\.\d+)\s*Eh"
+        energy = float(regex_search(energy_regex, stdout).group(1))
+        spr_dict["energy"] = energy
+    return SinglePointResults(**spr_dict)
 
 
-def parse_g98_text(text: str) -> dict[str, Any]:
+@register(filetype=FileType.G98, calctypes=[CalcType.hessian], target="hessian")
+def parse_g98(text: str) -> dict[str, Any]:
     """Parse the Gaussian98 output text for frequencies and cartesian displacements.
 
     Args:
@@ -198,41 +316,6 @@ def parse_g98_text(text: str) -> dict[str, Any]:
     }
 
 
-def parse_numhess_dir(
-    directory: Union[Path, str],
-    filename: str = "numhess1",
-    stdout: Optional[str] = None,
-) -> SinglePointResults:
-    """Parse the output directory of a CREST numerical Hessian calculation.
-
-    Args:
-        directory: Path to the directory containing the CREST output files.
-        filename: The name of the file containing the numerical Hessian results.
-            Default is 'numhess1'.
-
-    Returns:
-        The parsed numerical Hessian results as a SinglePointResults object.
-    """
-    # Parse the Hessian matrix
-    numhess_data = (Path(directory) / filename).read_text()
-    float_regex = r"[-+]?\d*\.\d+|\d+"
-    numbers = re.findall(float_regex, numhess_data)
-    array = np.array(numbers, dtype=float)
-    spr_dict: dict[str, Any] = {"hessian": array}
-
-    # Parse the frequency data from g98.out
-    g98_text = (Path(directory) / "g98.out").read_text()
-    parsed_g98 = parse_g98_text(g98_text)
-    spr_dict = {**spr_dict, **parsed_g98}
-
-    # Parse the energy if available
-    if stdout:
-        energy_regex = r"Energy\s*=\s*([-+]?\d+\.\d+)\s*Eh"
-        energy = float(regex_search(energy_regex, stdout).group(1))
-        spr_dict["energy"] = energy
-    return SinglePointResults(**spr_dict)
-
-
 def parse_optimization_dir(
     directory: Union[Path, str],
     *,
@@ -267,7 +350,7 @@ def parse_optimization_dir(
     fake_gradient = np.zeros(len(inp_obj.structure.symbols) * 3)
 
     # Parse program version
-    program_version = parse_version_string(stdout)
+    program_version = parse_version(stdout)
 
     # Collect final gradient if calculation succeeded
     try:

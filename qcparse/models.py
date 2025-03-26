@@ -1,9 +1,7 @@
 """Simple data models to support parsing of QM program output files."""
 
 from collections import defaultdict
-from enum import Enum
-from types import SimpleNamespace
-from typing import Callable, Optional
+from typing import Callable, Optional, Tuple, Union
 
 from pydantic import BaseModel, model_validator
 from qcio import CalcType
@@ -21,12 +19,14 @@ class ParserSpec(BaseModel):
             be considered successful. If True and the parser fails a MatchNotFoundError
             will be raised. If False and the parser fails the value will be ignored.
         calctypes: The calculation types that the parser work on.
+        target: The location on the data collector where the parser's output should be placed.
     """
 
     parser: Callable
     filetype: str
     required: bool
     calctypes: list[CalcType]
+    target: Optional[Union[str, Tuple[str, ...]]] = None
 
 
 class ParserRegistry(BaseModel):
@@ -35,13 +35,21 @@ class ParserRegistry(BaseModel):
     registry: dict[str, list[ParserSpec]] = defaultdict(list)
 
     def register(self, program: str, parser_spec: ParserSpec) -> None:
-        """Register a new parser function.
+        """Register a new parser function. Enforce that no two parsers for the same program use the same target.
 
         Args:
             program: The program that the parser is for.
             parser_spec: ParserSpec objects containing the parser function and
                 information about the parser.
         """
+        for registered_spec in self.registry.get(program, []):
+            if (
+                parser_spec.target is not None
+                and registered_spec.target == parser_spec.target
+            ):
+                raise RegistryError(
+                    f"Duplicate parser target '{parser_spec.target}' registered for program '{program}'."
+                )
         self.registry[program].append(parser_spec)
 
     def get_parsers(
@@ -54,8 +62,8 @@ class ParserRegistry(BaseModel):
 
         Args:
             program: The program to get parsers for.
-            filetype: If given only return parsers for this filetype.
-            calctype: Filter parsers for a given calculation type.
+            filetype: Filter parsers for this filetype.
+            calctype: Filter parsers for this calctype.
 
         Returns:
             List of ParserSpec objects.
@@ -91,72 +99,31 @@ class ParserRegistry(BaseModel):
             List of filetypes.
         """
         return list(
-            {
-                str(parser_info.filetype) for parser_info in self.get_parsers(program)
-            }
+            {str(parser_info.filetype) for parser_info in self.get_parsers(program)}
         )
 
 
 registry = ParserRegistry()
 
 
-class ParsedDataCollector(SimpleNamespace):
-    """A namespace that only allows attributes to be set once."""
+class DataCollector(dict):
+    """A dictionary for collecting data from parsers."""
 
-    def __setattr__(self, name, value):
-        """Only allow attributes to be set once on the object.
-
-        This provides a sanity check on parsers to make sure they are not overwriting
-        values that have already been set by another parser. There should only ever be
-        one parser per value for a given program and filetype.
-
-        >>> from qcparse.models import ParsedDataCollector
-        >>> obj = ParsedDataCollector()
-        >>> obj.value = 1
-        >>> obj.value
-        1
-        >>> obj.value = 2
-        AttributeError: This attribute has already been set by another parser and ...
-        ...
+    def add_data(self, target: Union[str, Tuple[str, ...]], value):
         """
-        if name in self.__dict__:
-            raise AttributeError(
-                f"The attribute '{name}' has already been set by another parser and "
-                "cannot be set again."
-            )
-        super().__setattr__(name, value)
+        Assign a value into the DataCollector at the specified target.
 
-    def dict(self) -> dict:
-        """Convert the namespace to a dictionary, including nested objects."""
-        return {
-            key: (
-                value.dict()
-                if isinstance(value, ParsedDataCollector)
-                else (
-                    [
-                        item.dict() if isinstance(item, ParsedDataCollector) else item
-                        for item in value
-                    ]
-                    if isinstance(value, list)
-                    else value
-                )
-            )
-            for key, value in vars(self).items()
-        }
-
-
-def single_point_results_namespace() -> ParsedDataCollector:
-    """Create a namespace for a qcio.SinglePointResult."""
-    output_obj = ParsedDataCollector()
-    output_obj.extras = ParsedDataCollector()
-
-    return output_obj
-
-
-class FileType(str, Enum):
-    """Enum of supported TeraChem filetypes."""
-
-    stdout = "stdout"
+        If target is a string, the value is assigned to that key.
+        If target is a tuple, the method navigates through nested dictionaries,
+        creating them as needed, and assigns the value at the final key.
+        """
+        if isinstance(target, str):
+            self[target] = value
+        else:
+            d = self
+            for key in target[:-1]:
+                d = d.setdefault(key, {})
+            d[target[-1]] = value
 
 
 class NativeInput(BaseModel):

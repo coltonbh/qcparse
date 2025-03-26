@@ -1,44 +1,53 @@
 import importlib
 import inspect
+import logging
 import re
-from typing import Optional
+from enum import Enum
+from typing import List, Optional, Tuple, Union
 
 from qcio import CalcType
 
 from qcparse.exceptions import MatchNotFoundError
-from qcparse.models import FileType, ParserSpec, registry
+from qcparse.models import ParserSpec, registry
+
+logger = logging.getLogger(__name__)
 
 
-def parser(
-    filetype: str = FileType.stdout,
+def register(
+    filetype: Enum,
     *,
+    calctypes: Optional[List[CalcType]] = None,
     required: bool = True,
-    only: Optional[list[CalcType]] = None,
+    target: Optional[Union[str, Tuple[str, ...]]] = None,
 ):
     """Decorator to register a function as a parser.
 
     Args:
         filetype: The filetype the parser operates on.
+        calctypes: A list of calculation types on which this parser should operate. If None, it applies to all CalcTypes.
         required: If True and the parser fails a MatchNotFoundError will be raised.
             If False and the parser fails the value will be ignored.
-        only: Only register the parser on these CalcTypes. If None the parser will be
-            registered for all CalcTypes.
+        target: Where on the data collector to assign the parsed result.
     """
+    if target is None:
+        assert (
+            filetype == "directory"
+        ), "target must be provided for non-directory filetypes"
 
     def decorator(func):
         # Get the current module name. Should match program name.
         module = inspect.getmodule(func).__name__
         program_name = module.split(".")[-1]
 
-        # Dynamically import the relevant FileTypes Enum from the module
-        supported_file_types = importlib.import_module(f"{module}").SUPPORTED_FILETYPES
+        # Dynamically import the relevant FileType Enum from the module
+        supported_file_types = importlib.import_module(f"{module}").FileType
 
         # Check if filetype is a member of the relevant Enum
-        if filetype not in supported_file_types:
+        if filetype not in [member for member in supported_file_types]:
             raise ValueError(
                 f"Program '{program_name}' does not support the filetype '{filetype}' "
                 f"defined in the decorator around '{func.__name__}'. Ether add "
-                f"'{filetype}' to the FileTypes Enum in '{module}' or change "
+                f"'{filetype}' to the FileType Enum in '{module}' or change "
                 f"the parser wrapper to the correct filetype."
             )
         # Create ParserSpec
@@ -46,7 +55,8 @@ def parser(
             parser=func,
             filetype=filetype,
             required=required,
-            calctypes=only or [CalcType.energy, CalcType.gradient, CalcType.hessian],
+            calctypes=calctypes if calctypes is not None else list(CalcType),
+            target=target,
         )
 
         # Register the function in the global registry

@@ -1,6 +1,6 @@
 import pytest
 
-from qcparse.models import ParsedDataCollector, single_point_results_namespace
+from qcparse.models import ParsedDataCollector, results_namespace
 
 
 def test_pdc_only_allows_attribute_to_be_set_once():
@@ -32,5 +32,5 @@ def test_pdc_dict_serialization_method():
 
 
 def test_single_point_data_collector_no_inputs():
-    pdc = single_point_results_namespace()
+    pdc = results_namespace()
     assert pdc.extras == ParsedDataCollector()

@@ -1,5 +1,9 @@
 class BaseError(Exception):
-    """Base tcparse exceptions"""
+    """Base qcparse exceptions"""
+
+
+class DecoderError(BaseError):
+    """Exception raised when a decoder error occurs"""
 
 
 class ParserError(BaseError):

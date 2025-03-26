@@ -1,87 +1,177 @@
 """Top level functions for the tcparse library"""
 
-import functools
-import warnings
+import logging
 from importlib import import_module
 from pathlib import Path
 from typing import Optional, Union
 
-from qcio import CalcType, ProgramInput, SinglePointResults
+from qcio import (
+    CalcType,
+    ConformerSearchResults,
+    OptimizationResults,
+    ProgramInput,
+    SinglePointResults,
+    StructuredInputs,
+    StructuredResults,
+)
 
-from .exceptions import EncoderError, MatchNotFoundError, ParserError
-from .models import NativeInput, ParserSpec, registry, single_point_results_namespace
+from .exceptions import DecoderError, EncoderError, MatchNotFoundError
+from .models import (
+    DataCollector,
+    NativeInput,
+    registry,
+)
 from .parsers import *  # noqa: F403 Ensure all parsers get registered
-from .utils import get_file_contents
 
 __all__ = ["parse", "parse_results", "encode", "registry"]
 
+logger = logging.getLogger(__name__)
 
-def parse(
-    data_or_path: Union[str, bytes, Path],
+
+RESULTS_TYPE_MAP = {
+    CalcType.energy: SinglePointResults,
+    CalcType.gradient: SinglePointResults,
+    CalcType.hessian: SinglePointResults,
+    CalcType.optimization: OptimizationResults,
+    CalcType.transition_state: OptimizationResults,
+    CalcType.conformer_search: ConformerSearchResults,
+}
+
+
+def decode(
     program: str,
-    filetype: str = "stdout",
-    calctype: Optional[CalcType] = None,
-) -> SinglePointResults:
-    """Parse a file using the parsers registered for the given program.
-
-    Can expand function to return other Results objects in the future.
-
+    calctype: CalcType,
+    stdout: Optional[str] = None,
+    directory: Optional[Union[str, Path]] = None,
+    *,
+    input_data: Optional[StructuredInputs] = None,
+) -> StructuredResults:
+    """Decode the output of a quantum chemistry program into a standardized output.
+    
     Args:
-        data_or_path: File contents (str or bytes) or path to the file to parse.
         program: The QC program that generated the output file.
-            To see the available programs run:
-            >>> from qcparse import registry
-            >>> registry.supported_programs()
-        filetype: The type of file to parse (e.g. 'stdout' for the log output).
-            To see the available filetypes for a given program run
-            >>> from qcparse import registry
-            >>> registry.supported_filetypes('program_name')
-
-    Returns:
-        A SinglePointResults object containing the parsed data.
-
-    Raises:
-        ParserError: If no parsers are registered for the filetype of the program.
-        MatchNotFoundError: If a required parser fails to parse its data.
+        calctype: The type of calculation that was run.
+        stdout: The stdout file contents as a string.
+        directory: The directory containing the output files.
+        **parser_kwargs: Additional keyword arguments to pass to the parsers.
     """
-    parsers = import_module(f"qcparse.parsers.{program}")
+    logger.info("Starting decode for program: %s with calctype: %s", program, calctype)
 
-    # Check that filetype is supported by the program's parsers
-    if filetype not in parsers.SUPPORTED_FILETYPES:
-        raise ParserError(f"filetype '{filetype}' not supported by {program} parsers.")
+    if not stdout and not directory:
+        raise ValueError("Either stdout, directory, or both must be provided.")
 
-    file_content = get_file_contents(data_or_path)
+    # Import the program-specific module.
+    try:
+        mod = import_module(f"qcparse.parsers.{program}")
+    except ImportError as e:
+        logger.exception("Failed to import module qcparse.parsers.%s", program)
+        raise DecoderError(f"No parsers found for program '{program}'.") from e
 
-    # Get the calctype if filetype is 'stdout'
-    if filetype == "stdout":
-        calctype = calctype if calctype else parsers.parse_calctype(file_content)
+    # Create a generator for stdout (if provided) and all parsable files in directory
+    files = mod.iter_files(stdout, directory)
 
-    # Get all the parsers for the program, filetype, and calctype
-    parser_specs: list[ParserSpec] = registry.get_parsers(program, filetype, calctype)
+    # Now iterate uniformly over the combined generator of all parsable files
+    data_collector = DataCollector()
+    for filetype, contents in files:
+        # Look up the parsers for the given program, filetype, and calctype
+        logger.debug("Processing file with filetype: %s", filetype)
+        parser_specs = registry.get_parsers(program, filetype, calctype)
+        logger.info("Found %d parser(s) for program '%s', filetype '%s', calctype '%s'", len(parser_specs), program, filetype, calctype) # noqa: E501
+        
+        for spec in parser_specs:
+            logger.debug("Running parser '%s' for target '%s'", spec.parser.__name__, spec.target) # noqa: E501
 
-    # Create a SinglePointResult namespace object to collect the parsed data
-    data_collector = single_point_results_namespace()
+            try:
+                # TODO: Fix this since iterator won't have directory "contents"
+                if spec.filetype == "directory":
+                    parsed_value = spec.parser(directory, stdout, input_data)
+                else:
+                    parsed_value = spec.parser(contents)
+                logger.info("Parser '%s' succeeded; returned value: %s", spec.parser.__name__, parsed_value) # noqa: E501
+            except MatchNotFoundError as e:  # Raised if the parser can't find its data
+                logger.warning("Parser '%s' did not find a match: %s", spec.parser.__name__, e) # noqa: E501
+                if spec.required:
+                    logger.error("Required parser '%s' failed; raising exception", spec.parser.__name__) # noqa: E501
+                    raise
+            else:
+                if isinstance(parsed_value, dict):
+                    for key, value in parsed_value.items():
+                        data_collector.add_data(key, value)
+                        logger.debug("Assigned parsed value to target '%s' on data_collector", (spec.target, key))
+                else:
+                    data_collector.add_data(spec.target, parsed_value)
+                logger.debug("Assigned parsed value to target '%s' on data_collector", spec.target) # noqa: E501
 
-    # Apply parsers to the file content.
-    for ps in parser_specs:
-        try:
-            ps.parser(file_content, data_collector)
-        except MatchNotFoundError:  # Raised if the parser can't find its data
-            if ps.required:
-                raise
-
-    return SinglePointResults(**data_collector.dict())
+    logger.info("Completed processing files; final data_collector state: %s", data_collector) # noqa: E501
+    # Finally, construct and return the StructuredResults using the collected data.
+    return RESULTS_TYPE_MAP[calctype](**data_collector)
 
 
-@functools.wraps(parse)
-def parse_results(*args, **kwargs):
-    warnings.warn(
-        "The function 'parse_results' is deprecated and will be removed in a future "
-        "version. Use 'parse' instead.",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    return parse(*args, **kwargs)
+# def parse(
+#     data_or_path: Union[str, bytes, Path],
+#     program: str,
+#     filetype: str = "stdout",
+#     calctype: Optional[CalcType] = None,
+# ) -> SinglePointResults:
+#     """Parse a file using the parsers registered for the given program.
+
+#     Can expand function to return other Results objects in the future.
+
+#     Args:
+#         data_or_path: File contents (str or bytes) or path to the file to parse.
+#         program: The QC program that generated the output file.
+#             To see the available programs run:
+#             >>> from qcparse import registry
+#             >>> registry.supported_programs()
+#         filetype: The type of file to parse (e.g. 'stdout' for the log output).
+#             To see the available filetypes for a given program run
+#             >>> from qcparse import registry
+#             >>> registry.supported_filetypes('program_name')
+
+#     Returns:
+#         A SinglePointResults object containing the parsed data.
+
+#     Raises:
+#         ParserError: If no parsers are registered for the filetype of the program.
+#         MatchNotFoundError: If a required parser fails to parse its data.
+#     """
+#     parsers = import_module(f"qcparse.parsers.{program}")
+
+#     # Check that filetype is supported by the program's parsers
+#     if filetype not in parsers.SUPPORTED_FILETYPES:
+#         raise ParserError(f"filetype '{filetype}' not supported by {program} parsers.")
+
+#     file_content = get_file_contents(data_or_path)
+
+#     # Get the calctype if filetype is 'stdout'
+#     if filetype == "stdout":
+#         calctype = calctype if calctype else parsers.parse_calctype(file_content)
+
+#     # Get all the parsers for the program, filetype, and calctype
+#     parser_specs: list[ParserSpec] = registry.get_parsers(program, filetype, calctype)
+
+#     # Create a SinglePointResult namespace object to collect the parsed data
+#     data_collector = results_namespace()
+
+#     # Apply parsers to the file content.
+#     for ps in parser_specs:
+#         try:
+#             ps.parser(file_content, data_collector)
+#         except MatchNotFoundError:  # Raised if the parser can't find its data
+#             if ps.required:
+#                 raise
+
+#     return SinglePointResults(**data_collector.dict())
+
+# @functools.wraps(parse)
+# def parse_results(*args, **kwargs):
+#     warnings.warn(
+#         "The function 'parse_results' is deprecated and will be removed in a future "
+#         "version. Use 'parse' instead.",
+#         DeprecationWarning,
+#         stacklevel=2,
+#     )
+#     return parse(*args, **kwargs)
 
 
 def encode(inp_data: ProgramInput, program: str) -> NativeInput:
