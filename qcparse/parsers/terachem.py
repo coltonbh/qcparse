@@ -1,13 +1,13 @@
 """Parsers for TeraChem output files."""
 
 import re
+from enum import Enum
 from pathlib import Path
-from typing import Optional, Union
+from typing import Generator, Optional, Union
 
 from qcconst import constants
 from qcio import (
     CalcType,
-    OptimizationResults,
     ProgramInput,
     ProgramOutput,
     Provenance,
@@ -15,15 +15,282 @@ from qcio import (
     Structure,
 )
 
-from qcparse.exceptions import MatchNotFoundError
-from qcparse.models import FileType, ParsedDataCollector
+from qcparse.exceptions import MatchNotFoundError, ParserError
 
-from .utils import parser, regex_search
-
-SUPPORTED_FILETYPES = {FileType.stdout}
+from ..registry import register
+from .utils import re_finditer, re_search
 
 
-def parse_calctype(string: str) -> CalcType:
+class TeraChemFileType(str, Enum):
+    """TeraChem filetypes."""
+
+    STDOUT = "stdout"
+    DIRECTORY = "directory"
+
+
+def iter_files(
+    stdout: Optional[str], directory: Optional[Union[Path, str]]
+) -> Generator[tuple[TeraChemFileType, Union[str, bytes, Path]], None, None]:
+    """
+    Iterate over the files in a TeraChem output directory.
+
+    If stdout is provided, yields a tuple for it.
+
+    If directory is provided, iterates over the directory to yield files according to
+    program-specific logic.
+
+    Args:
+        stdout: The contents of the TeraChem stdout file.
+        directory: The path to the directory containing the TeraChem output files.
+
+    Yields:
+        (FileType, contents) tuples for a program's output.
+    """
+    if stdout is not None:
+        yield TeraChemFileType.STDOUT, stdout
+
+    if directory is not None:
+        directory = Path(directory)
+        # Check if the directory exists and is a directory
+        if not directory.exists() or not directory.is_dir():
+            raise ParserError(
+                f"Directory {directory} does not exist or is not a directory."
+            )
+        yield TeraChemFileType.DIRECTORY, directory
+
+
+@register(
+    filetype=TeraChemFileType.STDOUT,
+    calctypes=[CalcType.energy, CalcType.gradient, CalcType.hessian],
+    target="energy",
+)
+def parse_energy(contents: str) -> float:
+    """Parse the final energy from TeraChem stdout.
+
+    NOTE:
+        - Works on frequency files containing many energy values because re.search()
+          returns the first result.
+    """
+    regex = r"FINAL ENERGY: (-?\d+(?:\.\d+)?)"
+    return float(re_search(regex, contents).group(1))
+
+
+@register(
+    filetype=TeraChemFileType.STDOUT,
+    calctypes=[CalcType.gradient, CalcType.hessian],
+    target="gradient",
+)
+def parse_gradient(contents: str) -> list[list[float]]:
+    """Parse the first gradient from TeraChem stdout.
+
+    Returns:
+        A single gradient as a list of 3-element lists.
+
+    Raises:
+        MatchNotFoundError: If no gradient data is found.
+    """
+    gradients = parse_gradients(contents)
+    return gradients[0]
+
+
+def parse_gradients(contents: str) -> list[list[list[float]]]:
+    """Parse gradients from TeraChem stdout.
+
+    Args:
+        contents: The contents of the TeraChem stdout file.
+
+    Returns:
+        A list of gradients. Each gradient is a list of 3-element lists,
+        where each 3-element list represents the gradient for one atom.
+
+    Raises:
+        MatchNotFoundError: If no gradient data is found.
+    """
+    # Match all floats after the dE/dX dE/dY dE/dZ header
+    # until a terminating line (e.g., '--' or '-=') is encountered.
+    regex = r"(?<=dE\/dX\s{12}dE\/dY\s{12}dE\/dZ\n)[\d\.\-\s]+(?=\n(?:--|-=))"
+    matches = re_finditer(regex, contents)
+
+    gradients = []
+    for match in matches:
+        # Convert the found numbers to floats.
+        values = [float(val) for val in match.group(0).split()]
+        # Group the values into chunks of 3 (for x, y, z).
+        gradient = [values[i : i + 3] for i in range(0, len(values), 3)]
+        gradients.append(gradient)
+
+    return gradients
+
+
+@register(
+    filetype=TeraChemFileType.STDOUT, calctypes=[CalcType.hessian], target="hessian"
+)
+def parse_hessian(contents: str) -> list[list[float]]:
+    """Parse Hessian Matrix from TeraChem stdout in one pass.
+
+    Args:
+        contents: The contents of the TeraChem stdout file.
+
+    Returns:
+        A square Hessian matrix as a list of lists of floats.
+
+    Raises:
+        MatchNotFoundError: If no Hessian data is found.
+        ParserError: If the extracted numbers cannot form a proper square matrix.
+    """
+    regex = r"\s+(?P<atom_number>\d+)\s(?P<vals>(?:\s-?\d.\d{15}e[+-]\d{2})+)"
+    hessian: list[list[float]] = []
+
+    matches = re_finditer(regex, contents)
+    # Iterate over all matches and populate the Hessian matrix
+    for match in matches:
+        atom_index = int(match.group("atom_number")) - 1  # Convert to zero-based index
+        # Check if the Hessian matrix has enough rows
+        if len(hessian) <= atom_index:
+            # Add empty rows if necessary
+            hessian.extend([[] for _ in range(atom_index - len(hessian) + 1)])
+        # Extract the values and convert them to floats
+        vals = [float(val) for val in match.group("vals").split()]
+        # Add values to the corresponding row
+        hessian[atom_index].extend(vals)
+
+    # Verify that the Hessian is a square matrix.
+    for i, row in enumerate(hessian):
+        if len(row) != len(hessian):
+            raise ParserError(
+                f"Hessian matrix is not square: row {i} has {len(row)} elements, expected {len(hessian)}."
+            )
+    return hessian
+
+
+@register(filetype=TeraChemFileType.STDOUT, target=("extras", "program_version"))
+def parse_version(contents: str) -> str:
+    """Parse version contents plus git commit from TeraChem stdout.
+
+    Matches format of 'terachem --version' on command line.
+
+    Example:
+        'v1.9-2022.03-dev [4daa16dd21e78d64be5415f7663c3d7c2785203c]'
+    """
+    return f"{parse_terachem_version(contents)} [{parse_version_control_details(contents)}]"
+
+
+@register(filetype=TeraChemFileType.STDOUT, target="calcinfo_natoms")
+def parse_natoms(contents: str) -> int:
+    """Parse number of atoms value from TeraChem stdout.
+
+    Returns:
+        The number of atoms as an integer.
+
+    Raises:
+        MatchNotFoundError: If the regex does not match.
+    """
+    regex = r"Total atoms:\s*(\d+)"
+    match = re_search(regex, contents)
+    return int(match.group(1))
+
+
+@register(filetype=TeraChemFileType.STDOUT, target="calcinfo_nmo")
+def parse_nmo(contents: str) -> int:
+    """Parse the number of molecular orbitals from TeraChem stdout.
+
+    Returns:
+        The number of molecular orbitals as an integer.
+
+    Raises:
+        MatchNotFoundError: If the regex does not match.
+    """
+    regex = r"Total orbitals:\s*(\d+)"
+    match = re_search(regex, contents)
+    return int(match.group(1))
+
+
+@register(
+    filetype=TeraChemFileType.DIRECTORY,
+    calctypes=[CalcType.optimization],
+    target="trajectory",
+)
+def parse_trajectory(
+    directory: Union[Path, str],
+    stdout: str,
+    input_data: ProgramInput,
+) -> list[ProgramOutput]:
+    """Parse the output directory of a TeraChem optimization calculation into a trajectory.
+
+    Args:
+        directory: Path to the directory containing the TeraChem output files.
+        stdout: The contents of the TeraChem stdout file.
+        input_data: The input object used for the calculation.
+
+    Returns:
+        A list of ProgramOutput objects.
+    """
+    directory = Path(directory)
+
+    # Parse the structures
+    structures = Structure.open_multi(directory / "optim.xyz")
+
+    # Parse the values from the stdout file
+    from qcparse import decode
+
+    parsed_results = decode("terachem", CalcType.energy, stdout=stdout)
+    gradients = parse_gradients(stdout)
+    # Create the trajectory
+    trajectory: list[ProgramOutput] = []
+    for structure, gradient in zip(structures, gradients):
+        # Create input data object for each structure and gradient in the trajectory.
+        input_data_obj = ProgramInput(
+            calctype=CalcType.gradient,
+            structure=structure,
+            model=input_data.model,
+            keywords=input_data.keywords,
+        )
+        # Create the results object for each structure and gradient in the trajectory.
+        assert isinstance(parsed_results, SinglePointResults)  # for mypy
+        spr_data = parsed_results.model_dump()
+        spr_data["energy"] = structure.extras[Structure._xyz_comment_key][0]
+        spr_data["gradient"] = gradient
+        results_obj = SinglePointResults(**spr_data)
+        # Create the provenance object for each structure and gradient in the trajectory.
+        prov = Provenance(
+            program="terachem",
+            program_version=parsed_results.extras["program_version"],
+            scratch_dir=directory,
+        )
+        # Create the ProgramOutput object for each structure and gradient in the trajectory.
+        traj_entry: ProgramOutput = ProgramOutput(
+            input_data=input_data_obj,
+            success=True,
+            results=results_obj,
+            provenance=prov,
+        )
+        trajectory.append(traj_entry)
+
+    return trajectory
+
+
+def parse_version_control_details(contents: str) -> str:
+    """Parse TeraChem git commit or Hg version from TeraChem stdout."""
+    regex = r"(Git|Hg) Version: (\S*)"
+    return re_search(regex, contents).group(2)
+
+
+def parse_terachem_version(contents: str) -> str:
+    """Parse TeraChem version from TeraChem stdout."""
+    regex = r"TeraChem (v\S*)"
+    return re_search(regex, contents).group(1)
+
+
+def calculation_succeeded(contents: str) -> bool:
+    """Determine from TeraChem stdout if a calculation completed successfully."""
+    regex = r"Job finished:"
+    if re.search(regex, contents):
+        # If any match for a failure regex is found, the calculation failed
+        return True
+    return False
+
+
+def parse_calctype(contents: str) -> CalcType:
     """Parse the calctype from TeraChem stdout."""
     calctypes = {
         r"SINGLE POINT ENERGY CALCULATIONS": CalcType.energy,
@@ -31,242 +298,51 @@ def parse_calctype(string: str) -> CalcType:
         r"FREQUENCY ANALYSIS": CalcType.hessian,
     }
     for regex, calctype in calctypes.items():
-        match = re.search(regex, string)
+        match = re.search(regex, contents)
         if match:
             return calctype
-    raise MatchNotFoundError(regex, string)
+    raise MatchNotFoundError(regex, contents)
 
 
-@parser()
-def parse_energy(string: str, data_collector: ParsedDataCollector):
-    """Parse the final energy from TeraChem stdout.
-
-    NOTE:
-        - Works on frequency files containing many energy values because re.search()
-            returns the first result
-    """
-    regex = r"FINAL ENERGY: (-?\d+(?:\.\d+)?)"
-    data_collector.energy = float(regex_search(regex, string).group(1))
-
-
-def parse_excited_states(string: str):
+@register(
+    filetype=TeraChemFileType.STDOUT,
+    calctypes=[CalcType.energy, CalcType.gradient],
+    required=False,
+    target=("extras", "excited_states"),
+)
+def parse_excited_states(contents: str) -> list[dict]:
     """Parse the excited state information from a TDDFT TeraChem stdout.
-    Creates a list of matches. One for each computed excited state.
-    Each match is a dictionary with keys corresponding to the columns of excited state information at the end of a TDDFT TeraChem stdout.
+
+    Args:
+        contents: The contents of the TeraChem TDDFT stdout file.
+    Returns:
+        A list of dictionaries containing the excited state information.
+    Raises:
+        MatchNotFoundError: If no excited state data is found.
+    Notes:
+        Converts the excitation energy from eV to Hartree.
     """
-    regex = r"^\s*(?:\d+)\s+(?P<energy>-?\d+\.\d+)\s+(?P<exc_energy>-?\d+\.\d+)\s+(?P<osc_strength>-?\d+\.\d+)\s+(?P<s_squared>-?\d+\.\d+)\s+(?P<max_ci_coeff>-?\d+\.\d+)\s+(?P<excitation>\d+\s+->\s+\d+\s+:\s+\w+\s+->\s+\w+)$"
-    
-    matches = re.finditer(regex, string, re.MULTILINE)
-    
-    # Create list to add each excited state to
+    regex = (
+        r"^\s*(?:\d+)\s+(?P<energy>-?\d+\.\d+)\s+"
+        r"(?P<exc_energy>-?\d+\.\d+)\s+"
+        r"(?P<osc_strength>-?\d+\.\d+)\s+"
+        r"(?P<s_squared>-?\d+\.\d+)\s+"
+        r"(?P<max_ci_coeff>-?\d+\.\d+)\s+"
+        r"(?P<excitation>\d+\s+->\s+\d+\s+:\s+\w+\s+->\s+\w+)$"
+    )
+    matches = re_finditer(regex, contents, re.MULTILINE)
+
+    # Create a list of dictionaries for each excited state
     excited_states = []
     for match in matches:
-        # Convert the match object to a dictionary of named groups
-        state_data = match.groupdict()
-        
+        excited_state = match.groupdict()
         # Convert numeric values to floats
-        for key in ['energy', 'exc_energy', 'osc_strength', 's_squared', 'max_ci_coeff']:
-            if key == "exc_energy":
-                state_data[key] = float(state_data[key]) * constants.EV_TO_HARTREE
-            else:
-                state_data[key] = float(state_data[key])
-        
-        excited_states.append(state_data)
-    
-    if not excited_states:
-        raise MatchNotFoundError(regex, string)
-    
+        for key, value in excited_state.items():
+            if key != "excitation":  # Keep the excitation string as is
+                excited_state[key] = float(value)
+
+        # Convert the excitation energy to Hartree
+        excited_state["exc_energy"] *= constants.EV_TO_HARTREE  # type: ignore
+        excited_states.append(excited_state)
+
     return excited_states
-
-
-def parse_gradients(string: str, all: bool = True) -> list[list[list[float]]]:
-    """Parse gradients from TeraChem stdout.
-
-    Args:
-        string: The contents of the TeraChem stdout file.
-        all: If True, return all gradients. If False, return only the first gradient.
-
-    Returns:
-        A list of gradients. Each gradient is a list of 3-element lists, where each
-        3-element list is a gradient for an atom.
-    """
-    # This will match all floats after the dE/dX dE/dY dE/dZ header and stop at the
-    # terminating -- or -= line that follows gradients or optimizations.
-    regex = r"(?<=dE\/dX\s{12}dE\/dY\s{12}dE\/dZ\n)[\d\.\-\s]+(?=\n(?:--|-=))"
-
-    if all is True:
-        match: Optional[Union[list, re.Match]] = re.findall(regex, string)
-    else:
-        match = re.search(regex, string)
-
-    if not match:
-        raise MatchNotFoundError(regex, string)
-
-    grad_strings: list[str] = match if all is True else [match.group()]  # type: ignore
-
-    gradients = []
-
-    for grad_string in grad_strings:
-        # split string and cast to floats
-        values = [float(val) for val in grad_string.split()]
-
-        # arrange into N x 3 gradient
-        gradient = []
-        for i in range(0, len(values), 3):
-            gradient.append(values[i : i + 3])
-
-        gradients.append(gradient)
-
-    return gradients
-
-
-@parser(only=[CalcType.gradient, CalcType.hessian])
-def parse_gradient(string: str, data_collector: ParsedDataCollector):
-    """Parse first gradient from TeraChem stdout."""
-    gradient = parse_gradients(string, all=False)[0]
-
-    data_collector.gradient = gradient
-
-
-@parser(only=[CalcType.hessian])
-def parse_hessian(string: str, data_collector: ParsedDataCollector):
-    """Parse Hessian Matrix from TeraChem stdout
-
-    Notes:
-        This function searches the entire document N times for all regex matches where
-        N is the number of atoms. This makes the function's code easy to reason about.
-        If performance becomes an issues for VERY large Hessians (unlikely) you can
-        accelerate this function by parsing all Hessian floats in one pass, like the
-        parse_gradient function above, and then doing the math to figure out how to
-        properly sequence those values to from the Hessian matrix given TeraChem's
-        six-column format for printing out Hessian matrix entries.
-    """
-    # requires .format(int). {{}} values are to escape {15|2} for .format()
-    regex = r"(?:\s+{}\s)((?:\s-?\d\.\d{{15}}e[+-]\d{{2}})+)"
-    hessian = []
-
-    # Match all rows containing Hessian data; one set of rows at a time
-    count = 1
-    while matches := re.findall(regex.format(count), string):
-        row = []
-        for match in matches:
-            row.extend([float(val) for val in match.split()])
-        hessian.append(row)
-        count += 1
-
-    if not hessian:
-        raise MatchNotFoundError(regex, string)
-
-    # Assert we have created a square Hessian matrix
-    for i, row in enumerate(hessian):
-        assert len(row) == len(
-            hessian
-        ), "We must have missed some floats. Hessian should be a square matrix. Only "
-        f"recovered {len(row)} of {len(hessian)} floats for row {i}."
-
-    data_collector.hessian = hessian
-
-
-@parser()
-def parse_natoms(string: str, data_collector: ParsedDataCollector):
-    """Parse number of atoms value from TeraChem stdout"""
-    regex = r"Total atoms:\s*(\d+)"
-    data_collector.calcinfo_natoms = int(regex_search(regex, string).group(1))
-
-
-@parser()
-def parse_nmo(string: str, data_collector: ParsedDataCollector):
-    """Parse the number of molecular orbitals TeraChem stdout"""
-    regex = r"Total orbitals:\s*(\d+)"
-    data_collector.calcinfo_nmo = int(regex_search(regex, string).group(1))
-
-
-def parse_version_control_details(string: str) -> str:
-    """Parse TeraChem git commit or Hg version from TeraChem stdout."""
-    regex = r"(Git|Hg) Version: (\S*)"
-    return regex_search(regex, string).group(2)
-
-
-def parse_terachem_version(string: str) -> str:
-    """Parse TeraChem version from TeraChem stdout."""
-    regex = r"TeraChem (v\S*)"
-    return regex_search(regex, string).group(1)
-
-
-def parse_version_string(string: str) -> str:
-    """Parse version string plus git commit from TeraChem stdout.
-
-    Matches format of 'terachem --version' on command line.
-    """
-    return f"{parse_terachem_version(string)} [{parse_version_control_details(string)}]"
-
-
-def calculation_succeeded(string: str) -> bool:
-    """Determine from TeraChem stdout if a calculation completed successfully."""
-    regex = r"Job finished:"
-    if re.search(regex, string):
-        # If any match for a failure regex is found, the calculation failed
-        return True
-    return False
-
-
-def parse_optimization_dir(
-    directory: Union[Path, str],
-    stdout: str,
-    *,
-    inp_obj: ProgramInput,
-) -> OptimizationResults:
-    """Parse the output directory of a TeraChem optimization calculation.
-
-    Args:
-        directory: Path to the directory containing the TeraChem output files.
-        stdout: The contents of the TeraChem stdout file.
-        inp_obj: The input object used for the calculation.
-
-    Returns:
-        OptimizationResults object
-    """
-    directory = Path(directory)
-
-    # Parse the structures
-    structures = Structure.open(directory / "optim.xyz")
-    assert isinstance(structures, list), "Expected multiple structures in optim.xyz"
-
-    # Parse Values
-    from qcparse import parse
-
-    # Parse all the values from the stdout file
-    spr = parse(stdout, "terachem", "stdout", CalcType.energy)
-
-    gradients = parse_gradients(stdout)
-    program_version = parse_version_string(stdout)
-
-    # Create the trajectory
-    trajectory: list[ProgramOutput] = [
-        ProgramOutput(
-            input_data=ProgramInput(
-                calctype=CalcType.gradient,
-                structure=structure,
-                model=inp_obj.model,
-                keywords=inp_obj.keywords,
-            ),
-            results=SinglePointResults(
-                **{
-                    **spr.model_dump(),
-                    # TeraChem places the energy as the first comment in the xyz file
-                    "energy": structure.extras[Structure._xyz_comment_key][0],
-                    # # Will be coerced by Pydantic to np.ndarray
-                    "gradient": gradient,  # type: ignore
-                }
-            ),
-            success=True,
-            provenance=Provenance(
-                program="terachem",
-                program_version=program_version,
-                scratch_dir=directory.parent,
-            ),
-        )
-        for structure, gradient in zip(structures, gradients)
-    ]
-
-    return OptimizationResults(trajectory=trajectory)

@@ -1,39 +1,142 @@
-# Contributing
+# Parsing Framework Overview
 
 Hey there 👋! Look at you wanting to contribute! This package is designed to make it as easy as possible for you to contribute new parsers for quantum chemistry programs and to make it as easy as possible to maintain the code. This document will walk you through the design decisions and how to add new parsers.
 
-## TL;DR - How to add new parsers
+This framework standardizes how output files from quantum chemistry programs are parsed and converted into structured result objects. It separates parsers into two main categories:
 
-1. Create a file in the `parsers` directory named after the quantum chemistry program, e.g., `terachem.py`.
-2. Create a `SUPPORTED_FILETYPES` set in the module containing the file types the parsers support.
-3. If `stdout` is a file type then create a `def get_calctype(string: str) -> CalcType` function that returns the `CalcType` for the file. One of `CalcType.energy`, `CalcType.gradient`, or `CalcType.hessian`.
-4. Create simple parser functions that accept file data (`str | bytes`) and a `data_collector` object. The parser should 1) parse a single piece of data from the file, 2) cast it to the correct Python type and 3) set it on the output object at its corresponding location found on the `qcio.SinglePointResults` object. Register this parser by decorating it with the `@parser()` decorator. The decorator optionally accepts a `filetype` argument (`FileType.stdout` by default) and can declare keyword arguments `required` (`True` by default), and `only` (`None` by default). See the `qcparse.utils.parser` decorator for details on what these mean.
+1. Standard File Parsers:
+   These functions operate on a single file’s contents (e.g., stdout/log text). They accept a single input (which may be a str or bytes) and return one parsed value (which may be a single `float` or a list of objects).
 
-   ```py
-   @parser(filetype=FileType.stdout)
-   def parse_some_data(string: str, data_collector: ParsedDataCollector):
-   """Parse some data from a file."""
-       regex = r"Some Data: (-?\d+(?:\.\d+)?)"
-       data_collector.some_data = float(regex_search(regex, string).group(1))
-   ```
+2. Directory Parsers:
+   These functions handle more complex parsing tasks that involve an entire directory of output files and may need to operate on more than one file to create their final parsed value(s). They have a different signature and receive the directory path with optional additional context such as the stdout string and an input object. They may return a single value like standard parsers or a dictionary mapping keys to parsed values. When no target is specified at registration, the returned dictionary is merged into the final results data with each value at its specified key.
 
-5. That's it! The developer just has to focus on writing simple parser functions like this and the `qcparse` package will take care of registering these parsers for the correct program and filetype and will call them at the right time when parsing a file.
+This approach keeps the interface consistent and clear:
 
-See the `terachem.py` file for an overview.
+- Simple Parsers: Return a single value and specify a target.
+- Directory Parsers: Return a single value and specify a target, or return a dictionary and have their keys merged into the overall results.
 
-## Basic Architectural Overview and Program Flow
+## Registration of Parsers
 
-1. Top level `parse` function is called passing `data_or_path: Union[Path, str, bytes]`, the `program: str` that generated the output, and the `filetype` (e.g., `stdout` or `wavefunction` or whatever filetypes a particular program emits for which parsers have been written).
-2. `parse` instantiates an `ParsedDataCollector` object that acts as a proxy for the `SinglePointResults` object but offers two advantages:
-   - The `SinglePointResults` object has multiple required data fields, but parsers only return a single data value per parser. The `ParsedDataCollector` object gets passed to parsers and they can add their parsed value to the objects just as if it were a mutable `SinglePointResults` object. This makes it easy for each parser to both specify exactly what data they parse and where that data will live on the final structured object.
-   - The `ParsedDataCollector` object only allows setting a particular data attribute once. If a second attempt is made it raises an `AttributeError`. This provides a sanity check that multiple parsers aren't trying to write to the same field and overwriting each other.
-3. `parse` looks up the parsers for the `program` in the `parser_registry`. Parsers are registered by wrapping them with the `@parser` decorator found in `qcparse.parsers.utils`. The `@parser` decorator registers a parser with the registry under the program name of the module in which it is found, verifying that the `filetype` for which it is registered is supported by the `program` by checking `SupportedFileTypes` in the parser's module. It also registers whether a parser `must_succeed` which means an exception will be raised if this value is not found when attempting to parse a file. In order for parsers to properly register they must be imported, so make sure they are hoisted into the `qcparse.parsers.__init__` file.
-4. `parse` executes all parsers for the given `filetype` and converts the `ParsedDataCollector` object passed to all the parsers into a final `SinglePointResults` object.
+All parsers are registered via the `@register` decorator. The decorator’s parameters are as follows:
 
-## Publish the package
+- `filetype`: A value (typically from a program-specific enum such as `CrestFileType`) indicating the type of file the parser handles. For example, `CrestFileType.stdout` for log output or `CrestFileType.directory` for full-directory processing.
 
-With all code merged to `master` and the latest code pulled down to your local machine, run:
+- `calctypes` (optional): A list of calculation types (from the `qcio.CalcType` enum) on which this parser should run. If omitted, the parser applies to all calculation types.
 
-```sh
-python scripts/release.py x.x.x
+- `required`: A boolean indicating whether this parser is mandatory. If `True` and the parser fails to parse the expected data, a `MatchNotFoundError` is raised when the parser is executed from within the `decode` function. The parser should always raise a `MatchNotFoundError` if the value is not found and it is called on its own.
+
+- `target` (optional for directory parsers): For standard file parsers, this key (or nested key as a tuple) indicates where in the final results object the parser’s output should be stored. For directory parsers—those registered with `FileType.directory`—if no target is provided the parser is expected to return a dictionary, which will be merged into the final results object.
+
+The registry itself enforces that no two parsers for the same program register the same target.
+
+## Example: Standard File Parser
+
+```python
+from qcparse import register
+from qcio import CalcType
+from qcparse.utils import re_search
+
+
+@register(filetype=TeraChemFileType.STDOUT,calctypes=[CalcType.energy, CalcType.gradient], target="energy")
+def parse_energy(contents: str) -> float:
+    """
+    Parse the final energy from TeraChem stdout.
+
+    Args:
+        contents: The contents of the TeraChem stdout file.
+
+    Returns:
+        The energy as a float.
+    """
+    regex = r"FINAL ENERGY: (-?\d+(?:\.\d+)?)"
+    return float(re_search(regex, contents).group(1))
+
 ```
+
+## Example: Directory Parser (Dictionary Output)
+
+In this case, because the parser processes the whole directory output and returns multiple pieces of data, we omit the target. The returned dictionary is merged by the top-level parser.
+
+```python
+from qcparse import register
+from qcio import CalcType, ProgramInput
+
+@register(filetype=CrestFileType.DIRECTORY, calctypes=[CalcType.conformer_search])
+def parse_conformers(directory: Path, stdout: Optional[str], input_data: ProgramInput) -> dict[str, Any]:
+    """Parse the conformers from the output directory of a CREST conformer search calculation.
+
+    Args:
+        directory: Path to the directory containing the CREST output files.
+        stdout: The contents of the CREST stdout file (not used).
+        input_data: The input object used for the calculation
+
+    Returns:
+        The parsed conformers and their energies as a dictionary.
+    """
+    directory = Path(directory)
+    conformers = Structure.open_multi(
+        directory / "crest_conformers.xyz",
+        charge=input_data.structure.charge,
+        multiplicity=input_data.structure.multiplicity,
+    )
+
+    # CREST places the energy as the only value in the comment line
+    conf_energies = [
+        float(conf.extras[Structure._xyz_comment_key][0]) for conf in conformers
+    ]
+
+    return {
+        "conformers": conformers,
+        "conformer_energies": conf_energies,
+    }
+
+```
+
+## Example: Directory Parser (Single Output)
+
+Directory parsers may also return a single target value instead of a dictionary.
+
+```python
+@register(
+  filetype=TeraChemFileType.DIRECTORY,
+    calctypes=[CalcType.optimization],
+    target="trajectory", # Note target!
+)
+def parse_trajectory(directory: Path, stdout: str, input_data: ProgramInput) -> list[ProgramOutput]:
+    """Parse the output directory of a TeraChem optimization calculation into a trajectory.
+
+    Args:
+        directory: Path to the directory containing the TeraChem output files.
+        stdout: The contents of the TeraChem stdout file.
+        input_data: The input object used for the calculation.
+
+    Returns:
+        A list of ProgramOutput objects.
+    """
+    # Create the trajectory
+    trajectory: list[ProgramOutput] = []
+    # Parsing logic here...
+    return trajectory
+```
+
+See `parsers/terachem.py` for examples of both types of parsers.
+
+## Top-Level Decode Function
+
+The decode function orchestrates the parsing process:
+
+1.  It collects input files using a unified generator (`prog.iter_files()`) that will discover all parsable files.
+
+2.  It retrieves the appropriate parsers from the registry based on the program, filetype, and calctype.
+
+3.  It then dispatches parsers against these file:
+
+    - For Standard File Parsers: Calls the parser with the file’s contents and assigns the returned value to the specified target.
+
+    - For Composite (Directory) Parsers: Calls the parser with additional context (directory, stdout, input object). If the parser returns a dictionary, its key–value pairs are merged into the data collector, otherwise it assigns the returned value at the specified target.
+
+4.  Finally, the assembled data (a dictionary) is passed into the correct result model from `qcio` and returned.
+
+## Duplicate Target Registration
+
+The registry enforces unique targets per program per `CalcType`. This ensures that each parsed value is uniquely associated with a key in the final results. For example, if two parsers attempt to register with the same target for a given program for a given `CalcType`, the registry will raise an error, preventing ambiguity in the final result.

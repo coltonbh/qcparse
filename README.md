@@ -27,7 +27,7 @@ A library for parsing Quantum Chemistry output files into structured data object
   python -m pip install qcparse
   ```
 
-- Parse a file into a `SinglePointResults` object with a single line of code.
+- Parse a file into a structured data object with a single line of code.
 
   ```python
   from qcparse import parse

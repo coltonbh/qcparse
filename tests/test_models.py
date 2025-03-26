@@ -1,36 +1,13 @@
 import pytest
 
-from qcparse.models import ParsedDataCollector, single_point_results_namespace
+from qcparse.exceptions import DataCollectorError
+from qcparse.models import DataCollector
 
 
-def test_pdc_only_allows_attribute_to_be_set_once():
-    pdc = ParsedDataCollector()
-    pdc.energy = -74.964814
-    assert pdc.energy == -74.964814
+def test_data_collector_only_allows_one_value_per_key():
+    dc = DataCollector()
+    dc.add_data("energy", -74.964814)
+    assert dc["energy"] == -74.964814
 
-    with pytest.raises(AttributeError):
-        pdc.energy = -74.964814
-
-
-def test_pdc_dict_serialization_method():
-    pdc = ParsedDataCollector()
-    pdc.nested = ParsedDataCollector()
-    pdc.nested_list = [ParsedDataCollector(), ParsedDataCollector()]
-
-    pdc.value = 1
-    pdc.array = [1, 2, 3]
-    pdc.nested.energy = -74.964814
-    pdc.nested.map = {"key": [1, 2, 3]}
-    pdc.nested_list[0].value = 2
-    pdc.nested_list[1].value = 3
-
-    pdc_dict = pdc.dict()
-    assert pdc_dict["value"] == 1
-    assert pdc_dict["nested"]["energy"] == -74.964814
-    assert pdc_dict["nested_list"][0]["value"] == 2
-    assert pdc_dict["nested_list"][1]["value"] == 3
-
-
-def test_single_point_data_collector_no_inputs():
-    pdc = single_point_results_namespace()
-    assert pdc.extras == ParsedDataCollector()
+    with pytest.raises(DataCollectorError):
+        dc.add_data("energy", -24.964814)
