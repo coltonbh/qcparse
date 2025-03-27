@@ -61,42 +61,6 @@ def parse_energy(contents: str) -> float:
     return float(regex_search(regex, contents).group(1))
 
 
-def parse_excited_states(string: str):
-    """Parse the excited state information from a TDDFT TeraChem stdout.
-    Creates a list of matches. One for each computed excited state.
-    Each match is a dictionary with keys corresponding to the columns of excited state information at the end of a TDDFT TeraChem stdout.
-    """
-    regex = r"^\s*(?:\d+)\s+(?P<energy>-?\d+\.\d+)\s+(?P<exc_energy>-?\d+\.\d+)\s+(?P<osc_strength>-?\d+\.\d+)\s+(?P<s_squared>-?\d+\.\d+)\s+(?P<max_ci_coeff>-?\d+\.\d+)\s+(?P<excitation>\d+\s+->\s+\d+\s+:\s+\w+\s+->\s+\w+)$"
-
-    matches = re.finditer(regex, string, re.MULTILINE)
-
-    # Create list to add each excited state to
-    excited_states = []
-    for match in matches:
-        # Convert the match object to a dictionary of named groups
-        state_data = match.groupdict()
-
-        # Convert numeric values to floats
-        for key in [
-            "energy",
-            "exc_energy",
-            "osc_strength",
-            "s_squared",
-            "max_ci_coeff",
-        ]:
-            if key == "exc_energy":
-                state_data[key] = float(state_data[key]) * constants.EV_TO_HARTREE
-            else:
-                state_data[key] = float(state_data[key])
-
-        excited_states.append(state_data)
-
-    if not excited_states:
-        raise MatchNotFoundError(regex, string)
-
-    return excited_states
-
-
 @register(
     filetype=FileType.STDOUT,
     calctypes=[CalcType.gradient, CalcType.hessian],
@@ -287,7 +251,7 @@ def parse_trajectory(
             scratch_dir=directory.parent,
         )
         # Create the ProgramOutput object for each structure and gradient in the trajectory.
-        traj_entry = ProgramOutput(
+        traj_entry: ProgramOutput = ProgramOutput(
             input_data=input_data_obj,
             success=True,
             results=results_obj,
@@ -331,3 +295,39 @@ def parse_calctype(contents: str) -> CalcType:
         if match:
             return calctype
     raise MatchNotFoundError(regex, contents)
+
+
+def parse_excited_states(string: str):
+    """Parse the excited state information from a TDDFT TeraChem stdout.
+    Creates a list of matches. One for each computed excited state.
+    Each match is a dictionary with keys corresponding to the columns of excited state information at the end of a TDDFT TeraChem stdout.
+    """
+    regex = r"^\s*(?:\d+)\s+(?P<energy>-?\d+\.\d+)\s+(?P<exc_energy>-?\d+\.\d+)\s+(?P<osc_strength>-?\d+\.\d+)\s+(?P<s_squared>-?\d+\.\d+)\s+(?P<max_ci_coeff>-?\d+\.\d+)\s+(?P<excitation>\d+\s+->\s+\d+\s+:\s+\w+\s+->\s+\w+)$"
+
+    matches = re.finditer(regex, string, re.MULTILINE)
+
+    # Create list to add each excited state to
+    excited_states = []
+    for match in matches:
+        # Convert the match object to a dictionary of named groups
+        state_data = match.groupdict()
+
+        # Convert numeric values to floats
+        for key in [
+            "energy",
+            "exc_energy",
+            "osc_strength",
+            "s_squared",
+            "max_ci_coeff",
+        ]:
+            if key == "exc_energy":
+                state_data[key] = float(state_data[key]) * constants.EV_TO_HARTREE
+            else:
+                state_data[key] = float(state_data[key])
+
+        excited_states.append(state_data)
+
+    if not excited_states:
+        raise MatchNotFoundError(regex, string)
+
+    return excited_states

@@ -3,7 +3,7 @@
 import logging
 from importlib import import_module
 from pathlib import Path
-from typing import Optional, Union
+from typing import Any, Optional, Union
 
 from qcio import (
     CalcType,
@@ -82,9 +82,8 @@ def decode(
             logger.debug("Running parser '%s' for target '%s'", spec.parser.__name__, spec.target) # noqa: E501
 
             try:
-                # TODO: Fix this since iterator won't have directory "contents"
                 if spec.filetype == "directory":
-                    parsed_value = spec.parser(directory, stdout, input_data)
+                    parsed_value: Any = spec.parser(directory, stdout, input_data)
                 else:
                     parsed_value = spec.parser(contents)
                 logger.info("Parser '%s' succeeded; returned value: %s", spec.parser.__name__, parsed_value) # noqa: E501
@@ -99,80 +98,14 @@ def decode(
                         data_collector.add_data(key, value)
                         logger.debug("Assigned parsed value to target '%s' on data_collector", (spec.target, key))
                 else:
+                    if spec.target is None:
+                        raise ValueError(f"Non-dictionary parser '{spec.parser.__name__}' returned a value but its target is None") # noqa: E501
                     data_collector.add_data(spec.target, parsed_value)
                 logger.debug("Assigned parsed value to target '%s' on data_collector", spec.target) # noqa: E501
 
     logger.info("Completed processing files; final data_collector state: %s", data_collector) # noqa: E501
     # Finally, construct and return the StructuredResults using the collected data.
     return RESULTS_TYPE_MAP[calctype](**data_collector)
-
-
-# def parse(
-#     data_or_path: Union[str, bytes, Path],
-#     program: str,
-#     filetype: str = "stdout",
-#     calctype: Optional[CalcType] = None,
-# ) -> SinglePointResults:
-#     """Parse a file using the parsers registered for the given program.
-
-#     Can expand function to return other Results objects in the future.
-
-#     Args:
-#         data_or_path: File contents (str or bytes) or path to the file to parse.
-#         program: The QC program that generated the output file.
-#             To see the available programs run:
-#             >>> from qcparse import registry
-#             >>> registry.supported_programs()
-#         filetype: The type of file to parse (e.g. 'stdout' for the log output).
-#             To see the available filetypes for a given program run
-#             >>> from qcparse import registry
-#             >>> registry.supported_filetypes('program_name')
-
-#     Returns:
-#         A SinglePointResults object containing the parsed data.
-
-#     Raises:
-#         ParserError: If no parsers are registered for the filetype of the program.
-#         MatchNotFoundError: If a required parser fails to parse its data.
-#     """
-#     parsers = import_module(f"qcparse.parsers.{program}")
-
-#     # Check that filetype is supported by the program's parsers
-#     if filetype not in parsers.SUPPORTED_FILETYPES:
-#         raise ParserError(f"filetype '{filetype}' not supported by {program} parsers.")
-
-#     file_content = get_file_contents(data_or_path)
-
-#     # Get the calctype if filetype is 'stdout'
-#     if filetype == "stdout":
-#         calctype = calctype if calctype else parsers.parse_calctype(file_content)
-
-#     # Get all the parsers for the program, filetype, and calctype
-#     parser_specs: list[ParserSpec] = registry.get_parsers(program, filetype, calctype)
-
-#     # Create a SinglePointResult namespace object to collect the parsed data
-#     data_collector = results_namespace()
-
-#     # Apply parsers to the file content.
-#     for ps in parser_specs:
-#         try:
-#             ps.parser(file_content, data_collector)
-#         except MatchNotFoundError:  # Raised if the parser can't find its data
-#             if ps.required:
-#                 raise
-
-#     return SinglePointResults(**data_collector.dict())
-
-# @functools.wraps(parse)
-# def parse_results(*args, **kwargs):
-#     warnings.warn(
-#         "The function 'parse_results' is deprecated and will be removed in a future "
-#         "version. Use 'parse' instead.",
-#         DeprecationWarning,
-#         stacklevel=2,
-#     )
-#     return parse(*args, **kwargs)
-
 
 def encode(inp_data: ProgramInput, program: str) -> NativeInput:
     """Encode a ProgramInput object to a NativeInput object.

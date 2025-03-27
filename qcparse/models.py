@@ -1,12 +1,12 @@
 """Simple data models to support parsing of QM program output files."""
 
 from collections import defaultdict
-from typing import Callable, Optional, Tuple, Union
+from typing import Any, Callable, Optional, Tuple, Union
 
 from pydantic import BaseModel, model_validator
 from qcio import CalcType
 
-from .exceptions import RegistryError
+from .exceptions import DataCollectorError, RegistryError
 
 
 class ParserSpec(BaseModel):
@@ -42,13 +42,25 @@ class ParserRegistry(BaseModel):
             parser_spec: ParserSpec objects containing the parser function and
                 information about the parser.
         """
+        # Ensure all non-directory parsers have a target
+        if parser_spec.target is None and not parser_spec.filetype == "directory":
+            raise RegistryError(
+                f"Parser '{parser_spec.parser.__name__}' for program '{program}' must "
+                "have a target if it is not a directory parser."
+            )
+
+        # Ensure that the target is unique for the program and filetype
         for registered_spec in self.registry.get(program, []):
             if (
-                parser_spec.target is not None
-                and registered_spec.target == parser_spec.target
+                parser_spec.target is not None  # not directory parser
+                and registered_spec.target == parser_spec.target  # Same target
+                and set(parser_spec.calctypes)
+                & set(registered_spec.calctypes)  # Shared
             ):
                 raise RegistryError(
-                    f"Duplicate parser target '{parser_spec.target}' registered for program '{program}'."
+                    f"Duplicate parser target '{parser_spec.target}' and calctype "
+                    f"'{set(parser_spec.calctypes)& set(registered_spec.calctypes)}' "
+                    f"registered for program '{program}'."
                 )
         self.registry[program].append(parser_spec)
 
@@ -109,7 +121,7 @@ registry = ParserRegistry()
 class DataCollector(dict):
     """A dictionary for collecting data from parsers."""
 
-    def add_data(self, target: Union[str, Tuple[str, ...]], value):
+    def add_data(self, target: Union[str, Tuple[str, ...]], value: Any) -> None:
         """
         Assign a value into the DataCollector at the specified target.
 
@@ -117,13 +129,15 @@ class DataCollector(dict):
         If target is a tuple, the method navigates through nested dictionaries,
         creating them as needed, and assigns the value at the final key.
         """
-        if isinstance(target, str):
-            self[target] = value
-        else:
-            d = self
-            for key in target[:-1]:
-                d = d.setdefault(key, {})
-            d[target[-1]] = value
+        keys = target if isinstance(target, tuple) else (target,)
+        d = self
+        for key in keys[:-1]:
+            d = d.setdefault(key, {})
+        if keys[-1] in d:
+            raise DataCollectorError(
+                f"Target '{keys}' already exists in DataCollector. You cannot add the same target twice."
+            )
+        d[keys[-1]] = value
 
 
 class NativeInput(BaseModel):

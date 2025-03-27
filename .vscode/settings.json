@@ -16,6 +16,7 @@
         "natom",
         "natoms",
         "ndarray",
+        "nmodes",
         "nocuda",
         "numhess",
         "optim",
@@ -39,6 +40,7 @@
         "terachem",
         "topo",
         "traj",
-        "wavenumber"
+        "wavenumber",
+        "wavenumbers"
     ]
 }

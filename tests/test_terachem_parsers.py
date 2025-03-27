@@ -8,6 +8,7 @@ from qcparse.parsers.terachem import (
     calculation_succeeded,
     parse_calctype,
     parse_energy,
+    parse_excited_states,
     parse_gradient,
     parse_gradients,
     parse_hessian,
@@ -16,10 +17,9 @@ from qcparse.parsers.terachem import (
     parse_trajectory,
     parse_version,
     parse_version_control_details,
-    parse_excited_states,
 )
 
-from .data import gradients, hessians, excited_states
+from .data import excited_states, gradients, hessians
 
 
 @pytest.mark.parametrize(

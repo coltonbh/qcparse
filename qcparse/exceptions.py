@@ -27,3 +27,7 @@ class RegistryError(BaseError):
 
 class EncoderError(BaseError):
     """Exception raised when a encoder error occurs"""
+
+
+class DataCollectorError(BaseError):
+    """Exception raised when a data collector error occurs"""

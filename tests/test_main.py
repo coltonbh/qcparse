@@ -2,11 +2,11 @@ import pytest
 
 from qcparse.encoders import terachem
 from qcparse.exceptions import EncoderError
-from qcparse.main import encode, parse
+from qcparse.main import decode, encode
 
 
 def test_main_terachem_energy(terachem_energy_stdout):
-    computed_props = parse(terachem_energy_stdout, "terachem")
+    computed_props = decode("terachem", "energy", terachem_energy_stdout)
     assert computed_props.energy == -76.3861099088
 
 
