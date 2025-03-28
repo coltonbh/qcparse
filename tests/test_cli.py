@@ -1,11 +1,11 @@
 import subprocess
 
-from qcparse.main import decode
+from qcparse.codec import decode
 
 
 def test_cli(test_data_dir):
     # Call CLI script as a subprocess
-    filepath = test_data_dir / "water.energy.out"
+    filepath = test_data_dir / "terachem" / "water.energy.out"
     result = subprocess.run(
         ["qcparse", "terachem", "energy", filepath], capture_output=True, text=True
     )
@@ -13,6 +13,6 @@ def test_cli(test_data_dir):
     assert result.returncode == 0
 
     # Check the output
-    parse_result = decode("terachem", "energy", filepath.read_text())
+    parse_result = decode("terachem", "energy", stdout=filepath.read_text())
     expected_output = parse_result.model_dump_json(indent=4)
     assert result.stdout.strip() == expected_output

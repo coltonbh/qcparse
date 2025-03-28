@@ -10,4 +10,4 @@ def test_data_collector_only_allows_one_value_per_key():
     assert dc["energy"] == -74.964814
 
     with pytest.raises(DataCollectorError):
-        dc.add_data("energy", -74.964814)
+        dc.add_data("energy", -24.964814)

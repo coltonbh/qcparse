@@ -19,9 +19,9 @@ from .exceptions import DecoderError, EncoderError, MatchNotFoundError
 from .models import (
     DataCollector,
     NativeInput,
-    registry,
 )
 from .parsers import *  # noqa: F403 Ensure all parsers get registered
+from .registry import registry
 
 __all__ = ["parse", "parse_results", "encode", "registry"]
 
@@ -41,9 +41,9 @@ RESULTS_TYPE_MAP = {
 def decode(
     program: str,
     calctype: CalcType,
+    *,
     stdout: Optional[str] = None,
     directory: Optional[Union[str, Path]] = None,
-    *,
     input_data: Optional[StructuredInputs] = None,
 ) -> StructuredResults:
     """Decode the output of a quantum chemistry program into a standardized output.
@@ -53,7 +53,16 @@ def decode(
         calctype: The type of calculation that was run.
         stdout: The stdout file contents as a string.
         directory: The directory containing the output files.
-        **parser_kwargs: Additional keyword arguments to pass to the parsers.
+        input_data: The input data used for the calculation.
+            This is used to provide additional context for the parsers.
+
+    Returns:
+        A StructuredResults object containing the parsed data.
+
+    Raises:
+        DecoderError: If neither stdout nor directory is provided or if the program
+            or calctype is not supported.
+        MatchNotFoundError: If a required parser fails to find a match.
     """
     logger.info("Starting decode for program: %s with calctype: %s", program, calctype)
 
@@ -70,7 +79,7 @@ def decode(
     # Create a generator for stdout (if provided) and all parsable files in directory
     files = mod.iter_files(stdout, directory)
 
-    # Now iterate uniformly over the combined generator of all parsable files
+    # Now iterate over the combined generator of all parsable files
     data_collector = DataCollector()
     for filetype, contents in files:
         # Look up the parsers for the given program, filetype, and calctype
@@ -80,26 +89,29 @@ def decode(
         
         for spec in parser_specs:
             logger.debug("Running parser '%s' for target '%s'", spec.parser.__name__, spec.target) # noqa: E501
-
+            # Parse the contents using the parser
             try:
                 if spec.filetype == "directory":
                     parsed_value: Any = spec.parser(directory, stdout, input_data)
                 else:
                     parsed_value = spec.parser(contents)
                 logger.info("Parser '%s' succeeded; returned value: %s", spec.parser.__name__, parsed_value) # noqa: E501
-            except MatchNotFoundError as e:  # Raised if the parser can't find its data
+            # Raised if the parser can't find its data
+            except MatchNotFoundError as e:
                 logger.warning("Parser '%s' did not find a match: %s", spec.parser.__name__, e) # noqa: E501
                 if spec.required:
                     logger.error("Required parser '%s' failed; raising exception", spec.parser.__name__) # noqa: E501
                     raise
+            # Place the parsed value into the data collector
             else:
+                # If the parser returns a dictionary, assign each key-value pair to the data collector
                 if isinstance(parsed_value, dict):
                     for key, value in parsed_value.items():
                         data_collector.add_data(key, value)
                         logger.debug("Assigned parsed value to target '%s' on data_collector", (spec.target, key))
+                # Otherwise, assign the parsed value to the specified target
                 else:
-                    if spec.target is None:
-                        raise ValueError(f"Non-dictionary parser '{spec.parser.__name__}' returned a value but its target is None") # noqa: E501
+                    assert spec.target is not None, "Target must be specified for non-dictionary parsed values." # for mypy
                     data_collector.add_data(spec.target, parsed_value)
                 logger.debug("Assigned parsed value to target '%s' on data_collector", spec.target) # noqa: E501
 

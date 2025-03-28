@@ -16,16 +16,15 @@ from qcparse.parsers.crest import (
 )
 
 
-def test_parse_version(test_data_dir):
-    text = (test_data_dir / "crest_stdout.txt").read_text()
+def test_parse_version(crest_file):
+    text = crest_file("crest_stdout.txt")
     assert parse_version(text) == "3.0.1"
 
 
 def test_parse_conformers(test_data_dir, prog_inp):
     # Using fake prog_input for water; need .structure.charge and .multiplicity
-    data = parse_conformers(
-        test_data_dir / "crest_output", None, prog_inp("conformer_search")
-    )
+    directory = test_data_dir / "crest"
+    data = parse_conformers(directory, None, prog_inp("conformer_search"))
     assert len(data["conformers"]) == 3
     # Check conformer energies
     conf_energies = [-107.04437987, -107.04429757, -107.04413699]
@@ -42,9 +41,8 @@ def test_parse_conformers_charge_multiplicity_updates(test_data_dir, prog_inp):
     prog_input_dict["structure"]["charge"] = -2
     prog_input_dict["structure"]["multiplicity"] = 3
     # Using fake prog_input for water; need .structure.charge and .multiplicity
-    data = parse_conformers(
-        test_data_dir / "crest_output", None, ProgramInput(**prog_input_dict)
-    )
+    directory = test_data_dir / "crest"
+    data = parse_conformers(directory, None, ProgramInput(**prog_input_dict))
     assert len(data["conformers"]) == 3
     # Check conformer energies
     conf_energies = [-107.04437987, -107.04429757, -107.04413699]
@@ -56,9 +54,7 @@ def test_parse_conformers_charge_multiplicity_updates(test_data_dir, prog_inp):
 
 def test_parse_rotamers(test_data_dir, prog_inp):
     # Using fake prog_input for water; need .structure.charge and .multiplicity
-    data = parse_rotamers(
-        test_data_dir / "crest_output", None, prog_inp("conformer_search")
-    )
+    data = parse_rotamers(test_data_dir / "crest", None, prog_inp("conformer_search"))
     assert len(data["rotamers"]) == 2
     # Check conformer energies
     rot_energies = [-107.044379870000, -107.044379830000]
@@ -75,9 +71,8 @@ def test_parse_rotamers_charge_multiplicity_updates(test_data_dir, prog_inp):
     prog_input_dict["structure"]["charge"] = 3
     prog_input_dict["structure"]["multiplicity"] = 5
     # Using fake prog_input for water; need .structure.charge and .multiplicity
-    data = parse_rotamers(
-        test_data_dir / "crest_output", None, ProgramInput(**prog_input_dict)
-    )
+    directory = test_data_dir / "crest"
+    data = parse_rotamers(directory, None, ProgramInput(**prog_input_dict))
     assert len(data["rotamers"]) == 2
     # Check conformer energies
     rot_energies = [-107.044379870000, -107.044379830000]
@@ -87,14 +82,14 @@ def test_parse_rotamers_charge_multiplicity_updates(test_data_dir, prog_inp):
         assert struct.multiplicity == 5
 
 
-def test_parse_energy(test_data_dir):
-    text = (test_data_dir / "crest_output" / "crest.engrad").read_text()
-    assert parse_energy(text) == -0.335557824179335
+def test_parse_energy(crest_file):
+    contents = crest_file("crest.engrad")
+    assert parse_energy(contents) == -0.335557824179335
 
 
-def test_parse_gradient(test_data_dir):
-    text = (test_data_dir / "crest_output" / "crest.engrad").read_text()
-    assert parse_gradient(text) == [
+def test_parse_gradient(crest_file):
+    contents = crest_file("crest.engrad")
+    assert parse_gradient(contents) == [
         [-0.005962071557911, -0.004419818102026, 0.003139227894649],
         [0.003048425211480, 0.001982394235964, -0.001779667371498],
         [0.002913646346432, 0.002437423866062, -0.001359560523152],
@@ -116,8 +111,8 @@ def test_parse_energy_numhess():
     assert parse_energy_numhess(stdout) == -110.490788960984773
 
 
-def test_parse_numhess1(test_data_dir):
-    contents = (test_data_dir / "crest_output" / "numhess1").read_text()
+def test_parse_numhess1(crest_file):
+    contents = crest_file("numhess1")
     # fmt: off
     assert parse_numhess1(contents) == [[0.02040569, -0.00018059, 0.02080099, -0.02081319, 0.01511689, 0.00867078, 0.00037976, -0.01495837, -0.02946283], [-0.00018059, -0.01341723, -0.03209513, 0.01368595, 0.03374600, 0.01874084, -0.01351862, -0.02035995, 0.01336374], [0.02080099, -0.03209513, 0.00327178, 0.00784908, 0.01737681, -0.01812512, -0.02863169, 0.01472059, 0.01485103], [-0.02081319, 0.01368595, 0.00784908, 0.01933555, -0.01625843, -0.00694960, 0.00149263, 0.00258608, -0.00090575], [0.01511689, 0.03374600, 0.01737681, -0.01625843, -0.03409225, -0.01710500, 0.00114214, 0.00035657, -0.00027546], [0.00867078, 0.01874084, -0.01812512, -0.00694960, -0.01710500, 0.01843539, -0.00173455, -0.00164242, -0.00030677], [0.00037976, -0.01351862, -0.02863169, 0.00149263, 0.00114214, -0.00173455, -0.00185964, 0.01238496, 0.03036359], [-0.01495837, -0.02035995, 0.01472059, 0.00258608, 0.00035657, -0.00164242, 0.01238496, 0.02002423, -0.01308397], [-0.02946283, 0.01336374, 0.01485103, -0.00090575, -0.00027546, -0.00030677, 100.03036359, -0.01308397, -12.01454546]]
     # fmt: on
@@ -134,9 +129,9 @@ def test_parse_numhess1(test_data_dir):
     
 )
 # fmt: on
-def test_parse_g98_freqs(test_data_dir, filename, expected_freqs):
+def test_parse_g98_freqs(crest_file, filename, expected_freqs):
     """Test the parse_g98_freqs function."""
-    contents = (test_data_dir / "crest_output" / filename).read_text()
+    contents = crest_file(filename)
     parsed_freqs = parse_g98_freqs(contents)
     assert parsed_freqs == expected_freqs
 
@@ -152,21 +147,20 @@ def test_parse_g98_freqs(test_data_dir, filename, expected_freqs):
     
 )
 # fmt: on
-def test_parse_g98_normal_modes(test_data_dir, filename, expected_nmodes):
+def test_parse_g98_normal_modes(crest_file, test_data_dir, filename, expected_nmodes):
     """Test the parse_g98_normal_modes function."""
-    contents = (test_data_dir / "crest_output" / filename).read_text()
+    contents = crest_file(filename)
     n_modes = parse_g98_normal_modes(contents)
     if isinstance(expected_nmodes, str):
-        expected_nmodes = np.load(test_data_dir / expected_nmodes)
+        expected_nmodes = np.load(test_data_dir / "crest" / "answers" / expected_nmodes)
     np.testing.assert_array_almost_equal(n_modes,expected_nmodes, decimal=1e-7)
 
 
-def test_parse_optimization_dir(test_data_dir, prog_inp):
+def test_parse_optimization_dir(test_data_dir, crest_file, prog_inp):
     prog_input = prog_inp("optimization")
-    stdout = (test_data_dir / "crest_output" / "optstdout.txt").read_text()
-    trajectory = parse_trajectory(
-        test_data_dir / "crest_output", stdout, prog_input
-    )
+    stdout = crest_file("optstdout.txt")
+    directory = test_data_dir / "crest"
+    trajectory = parse_trajectory(directory, stdout, prog_input)
     assert len(trajectory) == 13
 
     # Fills in the final gradient correctly with values from crest.engrad files

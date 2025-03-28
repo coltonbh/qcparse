@@ -15,12 +15,13 @@ from qcio import (
     constants,
 )
 
-from qcparse.exceptions import MatchNotFoundError, ParserError
+from qcparse.exceptions import ParserError
 
-from .utils import regex_search, register
+from ..registry import register
+from .utils import re_finditer, re_search
 
 
-class FileType(str, Enum):
+class CrestFileType(str, Enum):
     """CREST filetypes.
 
     Maps file types to their names as written in the CREST output directory (except
@@ -37,7 +38,7 @@ class FileType(str, Enum):
 
 def iter_files(
     stdout: Optional[str], directory: Optional[Union[Path, str]]
-) -> Generator[Tuple[FileType, Union[str, bytes]], None, None]:
+) -> Generator[Tuple[CrestFileType, Union[str, bytes]], None, None]:
     """
     Iterate over the files in a CREST output directory.
 
@@ -56,33 +57,33 @@ def iter_files(
     directory = Path(directory) if directory else None
 
     if stdout is not None:
-        yield FileType.STDOUT, stdout
+        yield CrestFileType.STDOUT, stdout
 
     if directory is not None:
         for file in directory.iterdir():
             if file.is_file():
-                if file.name == FileType.G98.value:
-                    yield FileType.G98, file.read_text()
-                elif file.name == FileType.NUMHESS.value:
-                    yield FileType.NUMHESS, file.read_text()
-                elif file.name == FileType.ENGRAD.value:
-                    yield FileType.ENGRAD, file.read_text()
-                elif file.name == FileType.OPTLOG.value:
-                    yield FileType.OPTLOG, file.read_text()
+                if file.name == CrestFileType.G98.value:
+                    yield CrestFileType.G98, file.read_text()
+                elif file.name == CrestFileType.NUMHESS.value:
+                    yield CrestFileType.NUMHESS, file.read_text()
+                elif file.name == CrestFileType.ENGRAD.value:
+                    yield CrestFileType.ENGRAD, file.read_text()
+                elif file.name == CrestFileType.OPTLOG.value:
+                    yield CrestFileType.OPTLOG, file.read_text()
 
 
-@register(filetype=FileType.STDOUT, target=("extras", "program_version"))
+@register(filetype=CrestFileType.STDOUT, target=("extras", "program_version"))
 def parse_version(string: str) -> str:
     """Parse version string from CREST stdout.
 
     Matches format of 'crest --version' on command line.
     """
     regex = r"Version (\d+\.\d+\.\d+),"
-    match = regex_search(regex, string)
+    match = re_search(regex, string)
     return match.group(1)
 
 
-@register(filetype=FileType.DIRECTORY, calctypes=[CalcType.conformer_search])
+@register(filetype=CrestFileType.DIRECTORY, calctypes=[CalcType.conformer_search])
 def parse_conformers(
     directory: Union[Path, str], stdout: Optional[str], input_data: ProgramInput
 ) -> dict[str, Any]:
@@ -117,7 +118,7 @@ def parse_conformers(
     }
 
 
-@register(filetype=FileType.DIRECTORY, calctypes=[CalcType.conformer_search])
+@register(filetype=CrestFileType.DIRECTORY, calctypes=[CalcType.conformer_search])
 def parse_rotamers(
     directory: Union[Path, str], stdout: Optional[str], input_data: ProgramInput
 ) -> dict[str, Any]:
@@ -163,7 +164,7 @@ def _add_identifiers_to_structures(
 
 
 @register(
-    filetype=FileType.ENGRAD,
+    filetype=CrestFileType.ENGRAD,
     calctypes=[CalcType.energy, CalcType.gradient],
     target="energy",
 )
@@ -177,11 +178,11 @@ def parse_energy(contents: str) -> float:
         The parsed energy as a float.
     """
     energy_regex = r"# Energy \( Eh \)\n#*\n\s*([-\d.]+)"
-    return float(regex_search(energy_regex, contents).group(1))
+    return float(re_search(energy_regex, contents).group(1))
 
 
 @register(
-    filetype=FileType.ENGRAD,
+    filetype=CrestFileType.ENGRAD,
     calctypes=[CalcType.energy, CalcType.gradient],
     target="gradient",
 )
@@ -195,12 +196,12 @@ def parse_gradient(contents: str) -> list[list[float]]:
         The parsed gradient as a Nx3 list of lists of floats.
     """
     gradient_regex = r"# Gradient \( Eh/a0 \)\n#\s*\n((?:\s*[-\d.]+\n)+)"
-    vals = [float(x) for x in regex_search(gradient_regex, contents).group(1).split()]
+    vals = [float(x) for x in re_search(gradient_regex, contents).group(1).split()]
     # Group the values into chunks of 3 (for x, y, z).
     return [vals[i : i + 3] for i in range(0, len(vals), 3)]
 
 
-@register(filetype=FileType.STDOUT, calctypes=[CalcType.hessian], target="energy")
+@register(filetype=CrestFileType.STDOUT, calctypes=[CalcType.hessian], target="energy")
 def parse_energy_numhess(contents: str) -> float:
     """Parse the initial singlepoint calculation energy from stdout.
 
@@ -211,10 +212,12 @@ def parse_energy_numhess(contents: str) -> float:
         The parsed energy.
     """
     energy_regex = r"Energy\s=\s*([-+]?\d+\.\d+)\s*Eh"
-    return float(regex_search(energy_regex, contents).group(1))
+    return float(re_search(energy_regex, contents).group(1))
 
 
-@register(filetype=FileType.NUMHESS, calctypes=[CalcType.hessian], target="hessian")
+@register(
+    filetype=CrestFileType.NUMHESS, calctypes=[CalcType.hessian], target="hessian"
+)
 def parse_numhess1(contents: str) -> list[list[float]]:
     """Parse the numerical Hessian from the CREST numhess1 file.
 
@@ -225,7 +228,7 @@ def parse_numhess1(contents: str) -> list[list[float]]:
         The parsed Hessian as a list of lists of floats.
     """
     float_regex = r"[-]?\d*\.\d+|\d+"
-    numbers = [float(n) for n in re.findall(float_regex, contents)]
+    numbers = [float(match.group()) for match in re_finditer(float_regex, contents)]
     sqrt_n = int(math.sqrt(len(numbers)))
     if sqrt_n * sqrt_n != len(numbers):
         raise ParserError(
@@ -236,7 +239,7 @@ def parse_numhess1(contents: str) -> list[list[float]]:
 
 
 @register(
-    filetype=FileType.G98, calctypes=[CalcType.hessian], target="freqs_wavenumber"
+    filetype=CrestFileType.G98, calctypes=[CalcType.hessian], target="freqs_wavenumber"
 )
 def parse_g98_freqs(contents: str) -> list[float]:
     """Parse the frequencies (wavenumbers) from G98 output text.
@@ -247,17 +250,16 @@ def parse_g98_freqs(contents: str) -> list[float]:
     Returns:
         A list of frequencies (wavenumbers) as floats.
     """
-    regex = r"Frequencies\s+--\s+((?:-?\d+\.\d+\s*)+)"
+    regex = r"Frequencies\s+--\s+(?P<floats>(?:-?\d+\.\d+\s*)+)"
     # matches ['-335.2821                75.3406                87.4971\n ', ...]
-    matches = re.findall(regex, contents)
-    if not matches:
-        raise MatchNotFoundError(regex, contents)
-
-    return [float(freq) for match in matches for freq in match.split()]
+    matches = re_finditer(regex, contents)
+    return [float(freq) for match in matches for freq in match.group("floats").split()]
 
 
 @register(
-    filetype=FileType.G98, calctypes=[CalcType.hessian], target="normal_modes_cartesian"
+    filetype=CrestFileType.G98,
+    calctypes=[CalcType.hessian],
+    target="normal_modes_cartesian",
 )
 def parse_g98_normal_modes(contents: str) -> np.ndarray:
     """Parse the normal mode displacements from G98 output text.
@@ -294,7 +296,9 @@ def parse_g98_normal_modes(contents: str) -> np.ndarray:
 
 
 @register(
-    filetype=FileType.DIRECTORY, calctypes=[CalcType.optimization], target="trajectory"
+    filetype=CrestFileType.DIRECTORY,
+    calctypes=[CalcType.optimization],
+    target="trajectory",
 )
 def parse_trajectory(
     directory: Union[Path, str],
@@ -350,7 +354,7 @@ def parse_trajectory(
     ]
 
     # Collect final gradient if calculation succeeded
-    enegrad = directory / FileType.ENGRAD.value
+    enegrad = directory / CrestFileType.ENGRAD.value
     if enegrad.exists():
         # Parse the energy and gradient from the file
         contents = enegrad.read_text()

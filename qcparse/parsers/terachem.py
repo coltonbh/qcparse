@@ -17,10 +17,11 @@ from qcio import (
 
 from qcparse.exceptions import MatchNotFoundError
 
-from .utils import regex_search, register
+from ..registry import register
+from .utils import re_finditer, re_search
 
 
-class FileType(str, Enum):
+class TeraChemFileType(str, Enum):
     """TeraChem filetypes."""
 
     STDOUT = "stdout"
@@ -29,7 +30,7 @@ class FileType(str, Enum):
 
 def iter_files(
     stdout: Optional[str], directory: Optional[Union[Path, str]]
-) -> Generator[Tuple[FileType, Union[str, bytes]], None, None]:
+) -> Generator[Tuple[TeraChemFileType, Union[str, bytes]], None, None]:
     """
     Iterate over the files in a TeraChem output directory.
 
@@ -46,10 +47,10 @@ def iter_files(
         (FileType, contents) tuples for a program's output.
     """
     if stdout is not None:
-        yield FileType.STDOUT, stdout
+        yield TeraChemFileType.STDOUT, stdout
 
 
-@register(filetype=FileType.STDOUT, target="energy")
+@register(filetype=TeraChemFileType.STDOUT, target="energy")
 def parse_energy(contents: str) -> float:
     """Parse the final energy from TeraChem stdout.
 
@@ -58,11 +59,11 @@ def parse_energy(contents: str) -> float:
           returns the first result.
     """
     regex = r"FINAL ENERGY: (-?\d+(?:\.\d+)?)"
-    return float(regex_search(regex, contents).group(1))
+    return float(re_search(regex, contents).group(1))
 
 
 @register(
-    filetype=FileType.STDOUT,
+    filetype=TeraChemFileType.STDOUT,
     calctypes=[CalcType.gradient, CalcType.hessian],
     target="gradient",
 )
@@ -95,15 +96,12 @@ def parse_gradients(contents: str) -> list[list[list[float]]]:
     # Match all floats after the dE/dX dE/dY dE/dZ header
     # until a terminating line (e.g., '--' or '-=') is encountered.
     regex = r"(?<=dE\/dX\s{12}dE\/dY\s{12}dE\/dZ\n)[\d\.\-\s]+(?=\n(?:--|-=))"
-    matches = re.findall(regex, contents)
-
-    if not matches:
-        raise MatchNotFoundError(regex, contents)
+    matches = re_finditer(regex, contents)
 
     gradients = []
-    for grad_contents in matches:
+    for match in matches:
         # Convert the found numbers to floats.
-        values = [float(val) for val in grad_contents.split()]
+        values = [float(val) for val in match.group(0).split()]
         # Group the values into chunks of 3 (for x, y, z).
         gradient = [values[i : i + 3] for i in range(0, len(values), 3)]
         gradients.append(gradient)
@@ -111,7 +109,9 @@ def parse_gradients(contents: str) -> list[list[list[float]]]:
     return gradients
 
 
-@register(filetype=FileType.STDOUT, calctypes=[CalcType.hessian], target="hessian")
+@register(
+    filetype=TeraChemFileType.STDOUT, calctypes=[CalcType.hessian], target="hessian"
+)
 def parse_hessian(contents: str) -> list[list[float]]:
     """Parse Hessian Matrix from TeraChem stdout.
 
@@ -156,7 +156,7 @@ def parse_hessian(contents: str) -> list[list[float]]:
     return hessian
 
 
-@register(filetype=FileType.STDOUT, target=("extras", "program_version"))
+@register(filetype=TeraChemFileType.STDOUT, target=("extras", "program_version"))
 def parse_version(contents: str) -> str:
     """Parse version contents plus git commit from TeraChem stdout.
 
@@ -168,7 +168,7 @@ def parse_version(contents: str) -> str:
     return f"{parse_terachem_version(contents)} [{parse_version_control_details(contents)}]"
 
 
-@register(filetype=FileType.STDOUT, target="calcinfo_natoms")
+@register(filetype=TeraChemFileType.STDOUT, target="calcinfo_natoms")
 def parse_natoms(contents: str) -> int:
     """Parse number of atoms value from TeraChem stdout.
 
@@ -179,11 +179,11 @@ def parse_natoms(contents: str) -> int:
         MatchNotFoundError: If the regex does not match.
     """
     regex = r"Total atoms:\s*(\d+)"
-    match = regex_search(regex, contents)
+    match = re_search(regex, contents)
     return int(match.group(1))
 
 
-@register(filetype=FileType.STDOUT, target="calcinfo_nmo")
+@register(filetype=TeraChemFileType.STDOUT, target="calcinfo_nmo")
 def parse_nmo(contents: str) -> int:
     """Parse the number of molecular orbitals from TeraChem stdout.
 
@@ -194,12 +194,12 @@ def parse_nmo(contents: str) -> int:
         MatchNotFoundError: If the regex does not match.
     """
     regex = r"Total orbitals:\s*(\d+)"
-    match = regex_search(regex, contents)
+    match = re_search(regex, contents)
     return int(match.group(1))
 
 
 @register(
-    filetype=FileType.DIRECTORY,
+    filetype=TeraChemFileType.DIRECTORY,
     calctypes=[CalcType.optimization],
     target="trajectory",
 )
@@ -226,7 +226,7 @@ def parse_trajectory(
     # Parse the values from the stdout file
     from qcparse import decode
 
-    parsed_results = decode("terachem", CalcType.energy, stdout)
+    parsed_results = decode("terachem", CalcType.energy, stdout=stdout)
     gradients = parse_gradients(stdout)
 
     # Create the trajectory
@@ -265,13 +265,13 @@ def parse_trajectory(
 def parse_version_control_details(contents: str) -> str:
     """Parse TeraChem git commit or Hg version from TeraChem stdout."""
     regex = r"(Git|Hg) Version: (\S*)"
-    return regex_search(regex, contents).group(2)
+    return re_search(regex, contents).group(2)
 
 
 def parse_terachem_version(contents: str) -> str:
     """Parse TeraChem version from TeraChem stdout."""
     regex = r"TeraChem (v\S*)"
-    return regex_search(regex, contents).group(1)
+    return re_search(regex, contents).group(1)
 
 
 def calculation_succeeded(contents: str) -> bool:
@@ -297,37 +297,39 @@ def parse_calctype(contents: str) -> CalcType:
     raise MatchNotFoundError(regex, contents)
 
 
-def parse_excited_states(string: str):
+def parse_excited_states(contents: str) -> list[dict]:
     """Parse the excited state information from a TDDFT TeraChem stdout.
-    Creates a list of matches. One for each computed excited state.
-    Each match is a dictionary with keys corresponding to the columns of excited state information at the end of a TDDFT TeraChem stdout.
+
+    Args:
+        contents: The contents of the TeraChem TDDFT stdout file.
+    Returns:
+        A list of dictionaries containing the excited state information.
+    Raises:
+        MatchNotFoundError: If no excited state data is found.
+    Notes:
+        Converts the excitation energy from eV to Hartree.
     """
-    regex = r"^\s*(?:\d+)\s+(?P<energy>-?\d+\.\d+)\s+(?P<exc_energy>-?\d+\.\d+)\s+(?P<osc_strength>-?\d+\.\d+)\s+(?P<s_squared>-?\d+\.\d+)\s+(?P<max_ci_coeff>-?\d+\.\d+)\s+(?P<excitation>\d+\s+->\s+\d+\s+:\s+\w+\s+->\s+\w+)$"
+    regex = (
+        r"^\s*(?:\d+)\s+(?P<energy>-?\d+\.\d+)\s+"
+        r"(?P<exc_energy>-?\d+\.\d+)\s+"
+        r"(?P<osc_strength>-?\d+\.\d+)\s+"
+        r"(?P<s_squared>-?\d+\.\d+)\s+"
+        r"(?P<max_ci_coeff>-?\d+\.\d+)\s+"
+        r"(?P<excitation>\d+\s+->\s+\d+\s+:\s+\w+\s+->\s+\w+)$"
+    )
+    matches = re_finditer(regex, contents, re.MULTILINE)
 
-    matches = re.finditer(regex, string, re.MULTILINE)
-
-    # Create list to add each excited state to
+    # Create a list of dictionaries for each excited state
     excited_states = []
     for match in matches:
-        # Convert the match object to a dictionary of named groups
-        state_data = match.groupdict()
-
+        excited_state = match.groupdict()
         # Convert numeric values to floats
-        for key in [
-            "energy",
-            "exc_energy",
-            "osc_strength",
-            "s_squared",
-            "max_ci_coeff",
-        ]:
-            if key == "exc_energy":
-                state_data[key] = float(state_data[key]) * constants.EV_TO_HARTREE
-            else:
-                state_data[key] = float(state_data[key])
+        for key, value in excited_state.items():
+            if key != "excitation":  # Keep the excitation string as is
+                excited_state[key] = float(value)
 
-        excited_states.append(state_data)
-
-    if not excited_states:
-        raise MatchNotFoundError(regex, string)
+        # Convert the excitation energy to Hartree
+        excited_state["exc_energy"] *= constants.EV_TO_HARTREE  # type: ignore
+        excited_states.append(excited_state)
 
     return excited_states

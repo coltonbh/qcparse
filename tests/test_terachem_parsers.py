@@ -2,8 +2,8 @@ import numpy as np
 import pytest
 from qcio import CalcType
 
+from qcparse.codec import decode
 from qcparse.exceptions import MatchNotFoundError
-from qcparse.main import decode
 from qcparse.parsers.terachem import (
     calculation_succeeded,
     parse_calctype,
@@ -19,7 +19,7 @@ from qcparse.parsers.terachem import (
     parse_version_control_details,
 )
 
-from .data import excited_states, gradients, hessians
+from .data.terachem.answers import excited_states, gradients, hessians
 
 
 @pytest.mark.parametrize(
@@ -31,9 +31,8 @@ from .data import excited_states, gradients, hessians
         ("caffeine.gradient.out", -680.1453428559),
     ),
 )
-def test_parse_energy(test_data_dir, filename, expected_energy):
-    with open(test_data_dir / filename) as f:
-        tcout = f.read()
+def test_parse_energy(terachem_file, filename, expected_energy):
+    tcout = terachem_file(filename)
     result = parse_energy(tcout)
     assert result == expected_energy
 
@@ -58,11 +57,10 @@ def test_parse_energy_raises_exception():
         parse_energy("No energy here")
 
 
-def test_top_level_energy(test_data_dir):
-    with open(test_data_dir / "water.energy.out") as f:
-        stdout_str = f.read()
+def test_top_level_energy(terachem_file):
+    stdout = terachem_file("water.energy.out")
     expected_energy = -76.3861099088
-    results = decode(program="terachem", calctype=CalcType.energy, stdout=stdout_str)
+    results = decode("terachem", CalcType.energy, stdout=stdout)
 
     # Check that the energy value is present and correct
     assert hasattr(results, "energy"), "Results should have an 'energy' attribute."
@@ -79,10 +77,9 @@ def test_top_level_energy(test_data_dir):
         ("water.frequencies.out", CalcType.hessian),
     ),
 )
-def test_parse_calctype(test_data_dir, filename, calctype):
-    with open(test_data_dir / filename) as f:
-        string = f.read()
-    assert parse_calctype(string) == calctype
+def test_parse_calctype(terachem_file, filename, calctype):
+    contents = terachem_file(filename)
+    assert parse_calctype(contents) == calctype
 
 
 def test_parse_calctype_raises_exception():
@@ -90,19 +87,23 @@ def test_parse_calctype_raises_exception():
         parse_calctype("No driver here")
 
 
-def test_parse_version_git(terachem_energy_stdout):
-    parsed = parse_version(terachem_energy_stdout)
-    assert parsed == "v1.9-2022.03-dev [4daa16dd21e78d64be5415f7663c3d7c2785203c]"
+def test_parse_version_git(terachem_file):
+    contents = terachem_file("water.energy.out")
+    assert (
+        parse_version(contents)
+        == "v1.9-2022.03-dev [4daa16dd21e78d64be5415f7663c3d7c2785203c]"
+    )
 
 
-def test_parse_version_hg(test_data_dir):
-    hg_stdout = (test_data_dir / "hg.out").read_text()
-    parsed = parse_version(hg_stdout)
+def test_parse_version_hg(terachem_file):
+    contents = terachem_file("hg.out")
+    parsed = parse_version(contents)
     assert parsed == "v1.5K [ccdev]"
 
 
-def test_calculation_succeeded(terachem_energy_stdout):
-    assert calculation_succeeded(terachem_energy_stdout) is True
+def test_calculation_succeeded(terachem_file):
+    contents = terachem_file("water.energy.out")
+    assert calculation_succeeded(contents) is True
     assert (
         calculation_succeeded(
             """
@@ -122,10 +123,9 @@ def test_calculation_succeeded(terachem_energy_stdout):
         ("failure.basis.out", False),
     ),
 )
-def test_calculation_succeeded_cuda_failure(test_data_dir, filename, result):
-    with open(test_data_dir / filename) as f:
-        tcout = f.read()
-    assert calculation_succeeded(tcout) is result
+def test_calculation_succeeded_cuda_failure(terachem_file, filename, result):
+    contents = terachem_file(filename)
+    assert calculation_succeeded(contents) is result
 
 
 @pytest.mark.parametrize(
@@ -136,17 +136,15 @@ def test_calculation_succeeded_cuda_failure(test_data_dir, filename, result):
         ("caffeine.frequencies.out", gradients.caffeine_frequencies),
     ),
 )
-def test_parse_gradient(test_data_dir, filename, expected_gradient):
-    with open(test_data_dir / filename) as f:
-        tcout = f.read()
-    result = parse_gradient(tcout)
+def test_parse_gradient(terachem_file, filename, expected_gradient):
+    contents = terachem_file(filename)
+    result = parse_gradient(contents)
     assert result == expected_gradient
 
 
-def test_top_level_gradient(test_data_dir):
-    with open(test_data_dir / "water.gradient.out") as f:
-        stdout_str = f.read()
-    results = decode(program="terachem", calctype=CalcType.gradient, stdout=stdout_str)
+def test_top_level_gradient(terachem_file):
+    contents = terachem_file("water.gradient.out")
+    results = decode(program="terachem", calctype=CalcType.gradient, stdout=contents)
 
     # Check that the energy value is present and correct
     assert hasattr(results, "gradient"), "Results should have an 'gradient' attribute."
@@ -164,18 +162,15 @@ def test_top_level_gradient(test_data_dir):
         ("caffeine.frequencies.out", hessians.caffeine),
     ),
 )
-def test_parse_hessian(test_data_dir, filename, expected_hessian):
-    with open(test_data_dir / filename) as f:
-        tcout = f.read()
-
-    result = parse_hessian(tcout)
+def test_parse_hessian(terachem_file, filename, expected_hessian):
+    contents = terachem_file(filename)
+    result = parse_hessian(contents)
     assert result == expected_hessian
 
 
-def test_top_level_hessian(test_data_dir):
-    with open(test_data_dir / "water.frequencies.out") as f:
-        stdout_str = f.read()
-    results = decode(program="terachem", calctype=CalcType.hessian, stdout=stdout_str)
+def test_top_level_hessian(terachem_file):
+    contents = terachem_file("water.frequencies.out")
+    results = decode(program="terachem", calctype=CalcType.hessian, stdout=contents)
 
     # Check that the energy value is present and correct
     assert hasattr(results, "hessian"), "Results should have an 'hessian' attribute."
@@ -190,45 +185,41 @@ def test_top_level_hessian(test_data_dir):
     "filename,n_atoms",
     (("water.energy.out", 3), ("caffeine.gradient.out", 24)),
 )
-def test_parse_natoms(test_data_dir, filename, n_atoms):
-    with open(test_data_dir / filename) as f:
-        tcout = f.read()
-
-    assert parse_natoms(tcout) == n_atoms
+def test_parse_natoms(terachem_file, filename, n_atoms):
+    contents = terachem_file(filename)
+    assert parse_natoms(contents) == n_atoms
 
 
 @pytest.mark.parametrize(
     "filename,nmo",
     (("water.energy.out", 13), ("caffeine.gradient.out", 146)),
 )
-def test_parse_nmo(test_data_dir, filename, nmo):
-    with open(test_data_dir / filename) as f:
-        tcout = f.read()
-
+def test_parse_nmo(terachem_file, filename, nmo):
+    tcout = terachem_file(filename)
     assert parse_nmo(tcout) == nmo
 
 
-def test_parse_git_commit(terachem_energy_stdout):
-    git_commit = parse_version_control_details(terachem_energy_stdout)
+def test_parse_git_commit(terachem_file):
+    contents = terachem_file("water.energy.out")
     assert (
-        git_commit
+        parse_version_control_details(contents)
         == "4daa16dd21e78d64be5415f7663c3d7c2785203c"  # pragma: allowlist secret
     )
 
 
-def test_parse_gradients(test_data_dir):
-    stdout_opt = (test_data_dir / "terachem_opt" / "tc.out").read_text()
-
-    parsed_gradients = parse_gradients(stdout_opt)
+def test_parse_gradients(terachem_file):
+    contents = terachem_file("water.opt.out")
+    parsed_gradients = parse_gradients(contents)
     assert parsed_gradients == gradients.water_opt
 
 
-def test_parse_trajectory(test_data_dir, prog_inp):
+def test_parse_trajectory(terachem_file, test_data_dir, prog_inp):
+    # Setup the test data
     opt_inp = prog_inp("optimization")
-    stdout = (test_data_dir / "terachem_opt" / "tc.out").read_text()
-    trajectory = parse_trajectory(
-        test_data_dir / "terachem_opt", stdout, input_data=opt_inp
-    )
+    stdout = terachem_file("water.opt.out")
+    directory = test_data_dir / "terachem"
+
+    trajectory = parse_trajectory(directory, stdout, input_data=opt_inp)
     for prog_output in trajectory:
         assert prog_output.input_data.calctype == CalcType.gradient
         assert prog_output.input_data.model == opt_inp.model
@@ -255,25 +246,22 @@ def test_parse_trajectory(test_data_dir, prog_inp):
         ),
     ),
 )
-def test_parse_excited_states(test_data_dir, filename, excited_states):
+def test_parse_excited_states(terachem_file, filename, excited_states):
     """
     Tests the parse_excited_states function to ensure that it correctly parses
     excited states from TDDFT output files.
     """
-    with open(test_data_dir / filename) as f:
-        tcout = f.read()
-
-    parsed_excited_states = parse_excited_states(tcout)
+    contents = terachem_file(filename)
+    parsed_excited_states = parse_excited_states(contents)
     assert parsed_excited_states == excited_states
 
 
-def test_parse_excited_states_raises_exception_no_excited_states(test_data_dir):
+def test_parse_excited_states_raises_exception_no_excited_states(terachem_file):
     """
     Tests the parse_excited_states function to ensure that it correctly raises
     an exception when no excited states are found in the output file.
     """
-    with open(test_data_dir / "water.energy.out") as f:
-        tcout = f.read()
+    contents = terachem_file("water.energy.out")
 
     with pytest.raises(MatchNotFoundError):
-        parse_excited_states(tcout)
+        parse_excited_states(contents)

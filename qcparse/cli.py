@@ -1,7 +1,7 @@
 import argparse
 from pathlib import Path
 
-from .main import decode
+from .codec import decode
 
 
 def main():
@@ -28,5 +28,7 @@ def main():
     args = parser.parse_args()
 
     stdout_contents = Path(args.stdout).read_text() if args.stdout else None
-    results = decode(args.program, args.calctype, stdout_contents, args.directory)
+    results = decode(
+        args.program, args.calctype, stdout=stdout_contents, directory=args.directory
+    )
     print(results.model_dump_json(indent=4))
