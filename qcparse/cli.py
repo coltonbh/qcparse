@@ -1,7 +1,7 @@
 import argparse
 from pathlib import Path
 
-from .main import parse
+from .codec import decode
 
 
 def main():
@@ -10,15 +10,25 @@ def main():
         "Python objects."
     )
     parser.add_argument("program", help="Name of the program")
-    parser.add_argument("filepath", help="Path to the file")
     parser.add_argument(
-        "--filetype", help="Type of file. Defaults to 'stdout'", default="stdout"
+        "calctype", help="Type of calculation. See qcio.CalcType for options"
     )
-
+    parser.add_argument(
+        "stdout",
+        help="Path to the stdout file (optional)",
+        nargs="?",
+        default=None,
+    )
+    parser.add_argument(
+        "directory",
+        help="Path to the directory containing the output files (optional)",
+        nargs="?",
+        default=None,
+    )
     args = parser.parse_args()
 
-    single_point_results = parse(Path(args.filepath), args.program, args.filetype)
-    # Hacking in pretty print since probably preferred for most users
-    # Can update to result.json(indent=4) when this PR accepted
-    # https://github.com/MolSSI/QCElemental/pull/307
-    print(single_point_results.model_dump_json(indent=4))
+    stdout_contents = Path(args.stdout).read_text() if args.stdout else None
+    results = decode(
+        args.program, args.calctype, stdout=stdout_contents, directory=args.directory
+    )
+    print(results.model_dump_json(indent=4, exclude_unset=True))

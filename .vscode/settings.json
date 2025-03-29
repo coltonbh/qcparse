@@ -1,11 +1,14 @@
 {
     "python.formatting.provider": "black",
     "cSpell.words": [
+        "allclose",
         "calcinfo",
         "calctype",
         "calctypes",
+        "crestopt",
         "CUDA",
         "disp",
+        "ENGRAD",
         "freqs",
         "Hartree",
         "htmlcov",
@@ -13,9 +16,11 @@
         "natom",
         "natoms",
         "ndarray",
+        "nmodes",
         "nocuda",
         "numhess",
         "optim",
+        "OPTLOG",
         "pathconf",
         "psutil",
         "qcel",
@@ -30,9 +35,13 @@
         "tcout",
         "tcparse",
         "tcstdout",
+        "tddft",
         "tensorbox",
         "Tera",
         "terachem",
-        "wavenumber"
+        "topo",
+        "traj",
+        "wavenumber",
+        "wavenumbers"
     ]
 }
