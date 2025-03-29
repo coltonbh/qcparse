@@ -15,7 +15,7 @@ from qcio import (
     Structure,
 )
 
-from qcparse.exceptions import MatchNotFoundError
+from qcparse.exceptions import MatchNotFoundError, ParserError
 
 from ..registry import register
 from .utils import re_finditer, re_search
@@ -30,7 +30,7 @@ class TeraChemFileType(str, Enum):
 
 def iter_files(
     stdout: Optional[str], directory: Optional[Union[Path, str]]
-) -> Generator[Tuple[TeraChemFileType, Union[str, bytes]], None, None]:
+) -> Generator[Tuple[TeraChemFileType, Union[str, bytes, Path]], None, None]:
     """
     Iterate over the files in a TeraChem output directory.
 
@@ -48,6 +48,15 @@ def iter_files(
     """
     if stdout is not None:
         yield TeraChemFileType.STDOUT, stdout
+
+    if directory is not None:
+        directory = Path(directory)
+        # Check if the directory exists and is a directory
+        if not directory.exists() or not directory.is_dir():
+            raise ParserError(
+                f"Directory {directory} does not exist or is not a directory."
+            )
+        yield TeraChemFileType.DIRECTORY, directory
 
 
 @register(filetype=TeraChemFileType.STDOUT, target="energy")
@@ -113,46 +122,40 @@ def parse_gradients(contents: str) -> list[list[list[float]]]:
     filetype=TeraChemFileType.STDOUT, calctypes=[CalcType.hessian], target="hessian"
 )
 def parse_hessian(contents: str) -> list[list[float]]:
-    """Parse Hessian Matrix from TeraChem stdout.
+    """Parse Hessian Matrix from TeraChem stdout in one pass.
+
+    Args:
+        contents: The contents of the TeraChem stdout file.
 
     Returns:
-        A square matrix representing the Hessian, as a list of lists of floats.
+        A square Hessian matrix as a list of lists of floats.
 
     Raises:
         MatchNotFoundError: If no Hessian data is found.
-
-    Notes:
-        This function searches the entire document N times for all regex matches where
-        N is the number of atoms. This makes the function's code easy to reason about.
-        If performance becomes an issues for VERY large Hessians (unlikely) you can
-        accelerate this function by parsing all Hessian floats in one pass, like the
-        parse_gradient function above, and then doing the math to figure out how to
-        properly sequence those values to form the Hessian matrix given TeraChem's
-        six-column format for printing out Hessian matrix entries.
+        ParserError: If the extracted numbers cannot form a proper square matrix.
     """
-    # requires .format(int). {{}} values are to escape {15|2} for .format()
-    regex = r"(?:\s+{}\s)((?:\s-?\d\.\d{{15}}e[+-]\d{{2}})+)"
-    hessian = []
+    regex = r"\s+(?P<atom_number>\d+)\s(?P<vals>(?:\s-?\d.\d{15}e[+-]\d{2})+)"
+    hessian: list[list[float]] = []
 
-    count = 1
-    # Use a loop to collect each row based on the row number.
-    while matches := re.findall(regex.format(count), contents):
-        row = []
-        for match in matches:
-            row.extend([float(val) for val in match.split()])
-        hessian.append(row)
-        count += 1
-
-    if not hessian:
-        raise MatchNotFoundError(regex, contents)
+    matches = re_finditer(regex, contents)
+    # Iterate over all matches and populate the Hessian matrix
+    for match in matches:
+        atom_index = int(match.group("atom_number")) - 1  # Convert to zero-based index
+        # Check if the Hessian matrix has enough rows
+        if len(hessian) <= atom_index:
+            # Add empty rows if necessary
+            hessian.extend([[] for _ in range(atom_index - len(hessian) + 1)])
+        # Extract the values and convert them to floats
+        vals = [float(val) for val in match.group("vals").split()]
+        # Add values to the corresponding row
+        hessian[atom_index].extend(vals)
 
     # Verify that the Hessian is a square matrix.
     for i, row in enumerate(hessian):
         if len(row) != len(hessian):
-            raise ValueError(
+            raise ParserError(
                 f"Hessian matrix is not square: row {i} has {len(row)} elements, expected {len(hessian)}."
             )
-
     return hessian
 
 
@@ -228,7 +231,6 @@ def parse_trajectory(
 
     parsed_results = decode("terachem", CalcType.energy, stdout=stdout)
     gradients = parse_gradients(stdout)
-
     # Create the trajectory
     trajectory: list[ProgramOutput] = []
     for structure, gradient in zip(structures, gradients):
@@ -240,6 +242,7 @@ def parse_trajectory(
             keywords=input_data.keywords,
         )
         # Create the results object for each structure and gradient in the trajectory.
+        assert isinstance(parsed_results, SinglePointResults)  # for mypy
         spr_data = parsed_results.model_dump()
         spr_data["energy"] = structure.extras[Structure._xyz_comment_key][0]
         spr_data["gradient"] = gradient
@@ -248,7 +251,7 @@ def parse_trajectory(
         prov = Provenance(
             program="terachem",
             program_version=parsed_results.extras["program_version"],
-            scratch_dir=directory.parent,
+            scratch_dir=directory,
         )
         # Create the ProgramOutput object for each structure and gradient in the trajectory.
         traj_entry: ProgramOutput = ProgramOutput(
@@ -297,6 +300,12 @@ def parse_calctype(contents: str) -> CalcType:
     raise MatchNotFoundError(regex, contents)
 
 
+@register(
+    filetype=TeraChemFileType.STDOUT,
+    calctypes=[CalcType.energy, CalcType.gradient],
+    required=False,
+    target=("extras", "excited_states"),
+)
 def parse_excited_states(contents: str) -> list[dict]:
     """Parse the excited state information from a TDDFT TeraChem stdout.
 

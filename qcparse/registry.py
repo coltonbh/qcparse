@@ -37,9 +37,9 @@ class ParserSpec:
     target: Optional[Union[str, Tuple[str, ...]]] = None
 
     def __post_init__(self):
-        """Ensure that the parser function is callable and that target exists unless filetype is directory."""
+        """Ensure that the parser function is Callable and that target exists unless filetype is directory."""
         if not callable(self.parser):
-            raise RegistryError(f"Parser '{self.parser}' is not callable.")
+            raise RegistryError(f"Parser '{self.parser}' is not Callable.")
         if self.filetype != "directory" and self.target is None:
             raise RegistryError(
                 f"Parser '{self.parser.__name__}' for program "
@@ -138,6 +138,21 @@ class ParserRegistry:
         return list(
             {parser_info.filetype.value for parser_info in self.get_parsers(program)}
         )
+
+    def get_spec(self, parser: Callable) -> ParserSpec:
+        """Get the ParserSpec for a given parser function.
+
+        Args:
+            parser: The parser function.
+
+        Returns:
+            The ParserSpec object.
+        """
+        for program, specs in self.registry.items():
+            for spec in specs:
+                if spec.parser == parser:
+                    return spec
+        raise RegistryError(f"No parser registered for '{parser.__name__}'.")
 
 
 registry = ParserRegistry()

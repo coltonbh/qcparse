@@ -45,7 +45,8 @@ def decode(
     stdout: Optional[str] = None,
     directory: Optional[Union[str, Path]] = None,
     input_data: Optional[StructuredInputs] = None,
-) -> StructuredResults:
+    as_dict: bool = False,
+) -> Union[StructuredResults, dict[str, Any]]:
     """Decode the output of a quantum chemistry program into a standardized output.
     
     Args:
@@ -55,6 +56,9 @@ def decode(
         directory: The directory containing the output files.
         input_data: The input data used for the calculation.
             This is used to provide additional context for the parsers.
+        as_dict: If True, return the results as a dictionary instead of a 
+            StructuredResults object. Used mostly for testing purposes to enable 
+            returning parsed data that isn't a fully valid StructuredResults object.
 
     Returns:
         A StructuredResults object containing the parsed data.
@@ -65,7 +69,6 @@ def decode(
         MatchNotFoundError: If a required parser fails to find a match.
     """
     logger.info("Starting decode for program: %s with calctype: %s", program, calctype)
-
     if not stdout and not directory:
         raise ValueError("Either stdout, directory, or both must be provided.")
 
@@ -98,10 +101,11 @@ def decode(
                 logger.info("Parser '%s' succeeded; returned value: %s", spec.parser.__name__, parsed_value) # noqa: E501
             # Raised if the parser can't find its data
             except MatchNotFoundError as e:
-                logger.warning("Parser '%s' did not find a match: %s", spec.parser.__name__, e) # noqa: E501
                 if spec.required:
                     logger.error("Required parser '%s' failed; raising exception", spec.parser.__name__) # noqa: E501
                     raise
+                else:
+                    logger.info("Parser '%s' did not find a match but is not required.", spec.parser.__name__) # noqa: E501
             # Place the parsed value into the data collector
             else:
                 # If the parser returns a dictionary, assign each key-value pair to the data collector
@@ -117,6 +121,8 @@ def decode(
 
     logger.info("Completed processing files; final data_collector state: %s", data_collector) # noqa: E501
     # Finally, construct and return the StructuredResults using the collected data.
+    if as_dict:
+        return dict(data_collector)
     return RESULTS_TYPE_MAP[calctype](**data_collector)
 
 def encode(inp_data: ProgramInput, program: str) -> NativeInput:

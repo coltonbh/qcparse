@@ -38,7 +38,7 @@ class CrestFileType(str, Enum):
 
 def iter_files(
     stdout: Optional[str], directory: Optional[Union[Path, str]]
-) -> Generator[Tuple[CrestFileType, Union[str, bytes]], None, None]:
+) -> Generator[Tuple[CrestFileType, Union[str, bytes, Path]], None, None]:
     """
     Iterate over the files in a CREST output directory.
 
@@ -60,16 +60,21 @@ def iter_files(
         yield CrestFileType.STDOUT, stdout
 
     if directory is not None:
-        for file in directory.iterdir():
-            if file.is_file():
-                if file.name == CrestFileType.G98.value:
-                    yield CrestFileType.G98, file.read_text()
-                elif file.name == CrestFileType.NUMHESS.value:
-                    yield CrestFileType.NUMHESS, file.read_text()
-                elif file.name == CrestFileType.ENGRAD.value:
-                    yield CrestFileType.ENGRAD, file.read_text()
-                elif file.name == CrestFileType.OPTLOG.value:
-                    yield CrestFileType.OPTLOG, file.read_text()
+        # Check if the directory exists and is a directory
+        if not directory.exists() or not directory.is_dir():
+            raise ParserError(
+                f"Directory {directory} does not exist or is not a directory."
+            )
+        yield CrestFileType.DIRECTORY, directory
+
+        # Iterate over the files in the directory and yield their contents
+        for filetype in CrestFileType:
+            # Ignore STDOUT and DIRECTORY as they are handled above
+            if filetype not in (CrestFileType.STDOUT, CrestFileType.DIRECTORY):
+                # Check if the file exists in the directory
+                file_path = directory / filetype.value
+                if file_path.exists():
+                    yield filetype, file_path.read_text()
 
 
 @register(filetype=CrestFileType.STDOUT, target=("extras", "program_version"))
@@ -114,7 +119,7 @@ def parse_conformers(
 
     return {
         "conformers": conformers,
-        "conformer_energies": np.array(conf_energies),
+        "conformer_energies": conf_energies,
     }
 
 
@@ -149,7 +154,7 @@ def parse_rotamers(
 
     return {
         "rotamers": rotamers,
-        "rotamer_energies": np.array(conf_energies),
+        "rotamer_energies": conf_energies,
     }
 
 
@@ -261,7 +266,7 @@ def parse_g98_freqs(contents: str) -> list[float]:
     calctypes=[CalcType.hessian],
     target="normal_modes_cartesian",
 )
-def parse_g98_normal_modes(contents: str) -> np.ndarray:
+def parse_g98_normal_modes(contents: str) -> list[list[list[float]]]:
     """Parse the normal mode displacements from G98 output text.
 
     Args:
@@ -287,12 +292,15 @@ def parse_g98_normal_modes(contents: str) -> np.ndarray:
         for i in range(n_atoms):
             for j in range(n_freqs):
                 index = i * (3 * n_freqs) + j * 3
-                coords = [float(val) for val in displacements[index : index + 3]]
+                # Convert the displacement values to floats and scale to Bohr
+                coords = [
+                    float(val) * constants.ANGSTROM_TO_BOHR
+                    for val in displacements[index : index + 3]
+                ]
                 mode_disp[j].append(coords)
         normal_modes_cartesian.extend(mode_disp)
 
-    # Convert the list of lists to a NumPy array and units to Bohr
-    return np.array(normal_modes_cartesian) * constants.ANGSTROM_TO_BOHR
+    return normal_modes_cartesian
 
 
 @register(

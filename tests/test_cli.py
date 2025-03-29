@@ -14,5 +14,5 @@ def test_cli(test_data_dir):
 
     # Check the output
     parse_result = decode("terachem", "energy", stdout=filepath.read_text())
-    expected_output = parse_result.model_dump_json(indent=4)
+    expected_output = parse_result.model_dump_json(indent=4, exclude_unset=True, exclude_defaults=True)
     assert result.stdout.strip() == expected_output

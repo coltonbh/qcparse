@@ -35,6 +35,7 @@
         "tcout",
         "tcparse",
         "tcstdout",
+        "tddft",
         "tensorbox",
         "Tera",
         "terachem",
