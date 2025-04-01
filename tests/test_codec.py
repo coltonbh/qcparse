@@ -1,8 +1,8 @@
 import pytest
 
-from qcparse.codec import decode, encode
-from qcparse.encoders import terachem
-from qcparse.exceptions import EncoderError
+from qccodec.codec import decode, encode
+from qccodec.encoders import terachem
+from qccodec.exceptions import EncoderError
 
 
 def test_main_terachem_energy(terachem_file):

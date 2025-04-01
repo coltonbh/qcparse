@@ -15,7 +15,7 @@ from qcio import (
     constants,
 )
 
-from qcparse.exceptions import ParserError
+from qccodec.exceptions import ParserError
 
 from ..registry import register
 from .utils import re_finditer, re_search

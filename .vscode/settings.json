@@ -26,7 +26,7 @@
         "psutil",
         "qcel",
         "qcio",
-        "qcparse",
+        "qccodec",
         "rotamer",
         "rotamers",
         "runtypes",

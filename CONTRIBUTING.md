@@ -32,9 +32,9 @@ The registry itself enforces that no two parsers for the same program register t
 ## Example: Standard File Parser
 
 ```python
-from qcparse import register
+from qccodec import register
 from qcio import CalcType
-from qcparse.utils import re_search
+from qccodec.utils import re_search
 
 
 @register(filetype=TeraChemFileType.STDOUT,calctypes=[CalcType.energy, CalcType.gradient], target="energy")
@@ -58,7 +58,7 @@ def parse_energy(contents: str) -> float:
 In this case, because the parser processes the whole directory output and returns multiple pieces of data, we omit the target. The returned dictionary is merged by the top-level parser.
 
 ```python
-from qcparse import register
+from qccodec import register
 from qcio import CalcType, ProgramInput
 
 @register(filetype=CrestFileType.DIRECTORY, calctypes=[CalcType.conformer_search])

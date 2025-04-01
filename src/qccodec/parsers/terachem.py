@@ -15,7 +15,7 @@ from qcio import (
     Structure,
 )
 
-from qcparse.exceptions import MatchNotFoundError, ParserError
+from qccodec.exceptions import MatchNotFoundError, ParserError
 
 from ..registry import register
 from .utils import re_finditer, re_search
@@ -231,7 +231,7 @@ def parse_trajectory(
     structures = Structure.open_multi(directory / "optim.xyz")
 
     # Parse the values from the stdout file
-    from qcparse import decode
+    from qccodec import decode
 
     parsed_results = decode("terachem", CalcType.energy, stdout=stdout)
     gradients = parse_gradients(stdout)

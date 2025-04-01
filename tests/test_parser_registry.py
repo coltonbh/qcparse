@@ -1,7 +1,7 @@
 import pytest
 
-from qcparse.exceptions import RegistryError
-from qcparse.registry import ParserSpec, registry
+from qccodec.exceptions import RegistryError
+from qccodec.registry import ParserSpec, registry
 
 
 def test_get_parsers_program():

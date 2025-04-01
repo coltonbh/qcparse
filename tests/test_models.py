@@ -1,7 +1,7 @@
 import pytest
 
-from qcparse.exceptions import DataCollectorError
-from qcparse.models import DataCollector
+from qccodec.exceptions import DataCollectorError
+from qccodec.models import DataCollector
 
 
 def test_data_collector_only_allows_one_value_per_key():

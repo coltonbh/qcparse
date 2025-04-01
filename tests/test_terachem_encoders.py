@@ -1,7 +1,7 @@
 import pytest
 
-from qcparse.encoders.terachem import PADDING, XYZ_FILENAME, encode
-from qcparse.exceptions import EncoderError
+from qccodec.encoders.terachem import PADDING, XYZ_FILENAME, encode
+from qccodec.exceptions import EncoderError
 
 
 def test_write_input_files(prog_inp):

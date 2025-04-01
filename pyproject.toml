@@ -1,43 +1,70 @@
-[tool.poetry]
-name = "qcparse"
+[project]
+name = "qccodec"
 version = "0.7.5"
 description = "A package for parsing Quantum Chemistry program file outputs into structured qcio data objects."
-authors = ["Colton Hicks <github@coltonhicks.com>"]
-license = "MIT"
 readme = "README.md"
-repository = "https://github.com/coltonbh/qcparse"
-homepage = "https://github.com/coltonbh/qcparse"
+authors = [{ name = "Colton Hicks", email = "github@coltonhicks.com" }]
+requires-python = ">=3.9"
+license = { file = "LICENSE" }
+dependencies = ["qcio>=0.14.0", "tomli-w>=1.0.0", "qcconst>=0.1.1"]
 
-[tool.poetry.dependencies]
-python = "^3.9"
-qcio = ">=0.14.0"
-tomli-w = "^1.0.0"
-qcconst = "^0.1.1"
+classifiers = [
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Chemistry",
+    "Topic :: Scientific/Engineering :: Physics",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Operating System :: OS Independent",
+]
 
-[tool.poetry.group.dev.dependencies]
-mypy = "^1.1.1"
-pytest = "^7.2.2"
-pre-commit = "^3.2.0"
-pytest-cov = "^4.0.0"
-ruff = "^0.8.3"
-types-toml = "^0.10.8.20240310"
+keywords = [
+    "quantum chemistry",
+    "parsing",
+    "file parser",
+    "qcio",
+    "computational chemistry",
+    "scientific computing",
+]
 
-[tool.poetry.scripts]
-qcparse = "qcparse.cli:main"
+[project.urls]
+Homepage = 'https://github.com/coltonbh/qccodec'
+Documentation = 'https://github.com/coltonbh/qccodec#readme'
+Source = 'https://github.com/coltonbh/qccodec'
+Changelog = 'https://github.com/coltonbh/qccodec/blob/master/CHANGELOG.md'
+"Bug Tracker" = 'https://github.com/coltonbh/qccodec/issues'
+
+[dependency-groups]
+dev = [
+    "mypy>=1.1.1",
+    "pytest>=7.2.2",
+    "pre-commit>=3.2.0",
+    "pytest-cov>=4.0.0",
+    "ruff>=0.8.3",
+    "types-toml>=0.10.8.20240310",
+]
+
+[project.scripts]
+qccodec = "qccodec.cli:main"
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [tool.pytest.ini_options]
-testpaths = "tests/"
+testpaths = ["tests"]
 
 [tool.ruff]
+exclude = [".venv"]
 line-length = 88
 target-version = "py39"
 
 [tool.ruff.lint]
-isort = { known-first-party = ["qcparse", "tests"] }
+isort = { known-first-party = ["qccodec", "tests"] }
 select = ["I", "F401"]
 
 [tool.coverage.run]
@@ -45,7 +72,7 @@ branch = true
 omit = ["*/tests/*", "*/migrations/*", "*site-packages*", "*__init__.py"]
 
 [tool.mypy]
-plugins = "pydantic.mypy"
+plugins = ["pydantic.mypy"]
 ignore_missing_imports = true
 
 [tool.pydantic-mypy]
@@ -55,7 +82,4 @@ warn_required_dynamic_aliases = true
 warn_untyped_fields = true
 
 [tool.typos]
-# Exclude specific files or directories
-files.extend-exclude = [
-    "tests/data/**", # Single file
-]
+files.extend-exclude = ["tests/data/**"]

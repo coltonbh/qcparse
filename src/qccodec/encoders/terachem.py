@@ -1,7 +1,7 @@
 from qcio import CalcType, ProgramInput
 
-from qcparse.exceptions import EncoderError
-from qcparse.models import NativeInput
+from qccodec.exceptions import EncoderError
+from qccodec.models import NativeInput
 
 SUPPORTED_CALCTYPES = {
     CalcType.energy,

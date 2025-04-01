@@ -1,3 +1,3 @@
 set -xe
 # Run tests
-poetry run pytest --cov-report=term-missing --cov-report html:htmlcov --cov-config=pyproject.toml --cov=qcparse --cov=tests .
+uv run pytest --cov-report=term-missing --cov-report html:htmlcov --cov-config=pyproject.toml --cov=qccodec --cov=tests .
