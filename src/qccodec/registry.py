@@ -6,7 +6,7 @@ from typing import Callable, Optional, Union
 
 from qcio import CalcType
 
-from qcparse.exceptions import RegistryError
+from qccodec.exceptions import RegistryError
 
 
 @dataclass

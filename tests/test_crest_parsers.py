@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 from qcio import CalcType, ProgramInput
 
-from qcparse.parsers.crest import (
+from qccodec.parsers.crest import (
     parse_conformers,
     parse_energy,
     parse_energy_numhess,

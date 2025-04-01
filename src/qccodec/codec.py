@@ -74,9 +74,9 @@ def decode(
 
     # Import the program-specific module.
     try:
-        mod = import_module(f"qcparse.parsers.{program}")
+        mod = import_module(f"qccodec.parsers.{program}")
     except ImportError as e:
-        logger.exception("Failed to import module qcparse.parsers.%s", program)
+        logger.exception("Failed to import module qccodec.parsers.%s", program)
         raise DecoderError(f"No parsers found for program '{program}'.") from e
 
     # Create a generator for stdout (if provided) and all parsable files in directory
@@ -140,7 +140,7 @@ def encode(inp_data: ProgramInput, program: str) -> NativeInput:
             input is invalid.
     """
     # Check that calctype is supported by the encoder
-    encoder = import_module(f"qcparse.encoders.{program}")
+    encoder = import_module(f"qccodec.encoders.{program}")
     if inp_data.calctype not in encoder.SUPPORTED_CALCTYPES:
         raise EncoderError(f"Calctype '{inp_data.calctype}' not supported by encoder.")
 

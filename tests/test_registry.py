@@ -3,8 +3,8 @@ from enum import Enum
 import pytest
 from qcio import CalcType
 
-from qcparse.exceptions import RegistryError
-from qcparse.registry import ParserSpec
+from qccodec.exceptions import RegistryError
+from qccodec.registry import ParserSpec
 
 
 class MockFileType(Enum):

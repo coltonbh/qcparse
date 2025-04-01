@@ -1,5 +1,5 @@
 class BaseError(Exception):
-    """Base qcparse exceptions"""
+    """Base qccodec exceptions"""
 
 
 class DecoderError(BaseError):

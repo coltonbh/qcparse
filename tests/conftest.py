@@ -9,9 +9,9 @@ import pytest
 from qcio import CalcType, ProgramInput
 from qcio.utils import water
 
-from qcparse.codec import decode
-from qcparse.exceptions import MatchNotFoundError
-from qcparse.registry import ParserRegistry, registry
+from qccodec.codec import decode
+from qccodec.exceptions import MatchNotFoundError
+from qccodec.registry import ParserRegistry, registry
 
 
 @pytest.fixture(scope="session")

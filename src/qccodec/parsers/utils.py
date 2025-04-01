@@ -1,7 +1,7 @@
 import logging
 import re
 
-from qcparse.exceptions import MatchNotFoundError
+from qccodec.exceptions import MatchNotFoundError
 
 logger = logging.getLogger(__name__)
 

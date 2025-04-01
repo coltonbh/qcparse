@@ -3,8 +3,8 @@ from pathlib import Path
 import pytest
 from qcio import CalcType, ProgramOutput
 
-from qcparse.exceptions import MatchNotFoundError
-from qcparse.parsers.terachem import (
+from qccodec.exceptions import MatchNotFoundError
+from qccodec.parsers.terachem import (
     calculation_succeeded,
     parse_calctype,
     parse_energy,

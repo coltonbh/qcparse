@@ -12,6 +12,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Changed
 
+- Renamed package from `qcparse` -> `qccodec`.
+- Removed `poetry` in favor of `hatchling` build system and `uv` for project management.
 - 🚨 Refactored top-level `parse` function to a new signature `decode(program: str, calctype: CalcType, *, stdout: Optional[str] = None, directory: Optional[Union[str, Path]] = None, input_data: Optional[StructuredInputs] = None) -> StructureResults`.
 - Changed parsers to no longer set data on a data collector object but to rather be pure functions returning their parsed data.
 - Renamed `@parser` decorator to `@register` and accept `target` kwarg that tells the registry where to place the parsed data on the data collector object.
@@ -190,27 +192,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Can return either `AtomicResult` or `FailedOperation` objects depending on whether calculation succeeded or failed.
 - Tests for all parsers and the main `parse` function.
 
-[unreleased]: https://github.com/coltonbh/qcparse/compare/0.7.5...HEAD
-[0.7.5]: https://github.com/coltonbh/qcparse/releases/tag/0.7.5
-[0.7.4]: https://github.com/coltonbh/qcparse/releases/tag/0.7.4
-[0.7.3]: https://github.com/coltonbh/qcparse/releases/tag/0.7.3
-[0.7.2]: https://github.com/coltonbh/qcparse/releases/tag/0.7.2
-[0.7.1]: https://github.com/coltonbh/qcparse/releases/tag/0.7.1
-[0.7.0]: https://github.com/coltonbh/qcparse/releases/tag/0.7.0
-[0.6.4]: https://github.com/coltonbh/qcparse/releases/tag/0.6.4
-[0.6.3]: https://github.com/coltonbh/qcparse/releases/tag/0.6.3
-[0.6.2]: https://github.com/coltonbh/qcparse/releases/tag/0.6.2
-[0.6.1]: https://github.com/coltonbh/qcparse/releases/tag/0.6.1
-[0.6.0]: https://github.com/coltonbh/qcparse/releases/tag/0.6.0
-[0.5.3]: https://github.com/coltonbh/qcparse/releases/tag/0.5.3
-[0.5.2]: https://github.com/coltonbh/qcparse/releases/tag/0.5.2
-[0.5.1]: https://github.com/coltonbh/qcparse/releases/tag/0.5.1
-[0.5.0]: https://github.com/coltonbh/qcparse/releases/tag/0.5.0
-[0.4.1]: https://github.com/coltonbh/qcparse/releases/tag/0.4.1
-[0.4.0]: https://github.com/coltonbh/qcparse/releases/tag/0.4.0
-[0.3.2]: https://github.com/coltonbh/qcparse/releases/tag/0.3.2
-[0.3.1]: https://github.com/coltonbh/qcparse/releases/tag/0.3.1
-[0.3.0]: https://github.com/coltonbh/qcparse/releases/tag/0.3.0
-[0.2.1]: https://github.com/coltonbh/qcparse/releases/tag/0.2.1
-[0.2.0]: https://github.com/coltonbh/qcparse/releases/tag/0.2.0
-[0.1.0]: https://github.com/coltonbh/qcparse/releases/tag/0.1.0
+[unreleased]: https://github.com/coltonbh/qccodec/compare/0.7.5...HEAD
+[0.7.5]: https://github.com/coltonbh/qccodec/releases/tag/0.7.5
+[0.7.4]: https://github.com/coltonbh/qccodec/releases/tag/0.7.4
+[0.7.3]: https://github.com/coltonbh/qccodec/releases/tag/0.7.3
+[0.7.2]: https://github.com/coltonbh/qccodec/releases/tag/0.7.2
+[0.7.1]: https://github.com/coltonbh/qccodec/releases/tag/0.7.1
+[0.7.0]: https://github.com/coltonbh/qccodec/releases/tag/0.7.0
+[0.6.4]: https://github.com/coltonbh/qccodec/releases/tag/0.6.4
+[0.6.3]: https://github.com/coltonbh/qccodec/releases/tag/0.6.3
+[0.6.2]: https://github.com/coltonbh/qccodec/releases/tag/0.6.2
+[0.6.1]: https://github.com/coltonbh/qccodec/releases/tag/0.6.1
+[0.6.0]: https://github.com/coltonbh/qccodec/releases/tag/0.6.0
+[0.5.3]: https://github.com/coltonbh/qccodec/releases/tag/0.5.3
+[0.5.2]: https://github.com/coltonbh/qccodec/releases/tag/0.5.2
+[0.5.1]: https://github.com/coltonbh/qccodec/releases/tag/0.5.1
+[0.5.0]: https://github.com/coltonbh/qccodec/releases/tag/0.5.0
+[0.4.1]: https://github.com/coltonbh/qccodec/releases/tag/0.4.1
+[0.4.0]: https://github.com/coltonbh/qccodec/releases/tag/0.4.0
+[0.3.2]: https://github.com/coltonbh/qccodec/releases/tag/0.3.2
+[0.3.1]: https://github.com/coltonbh/qccodec/releases/tag/0.3.1
+[0.3.0]: https://github.com/coltonbh/qccodec/releases/tag/0.3.0
+[0.2.1]: https://github.com/coltonbh/qccodec/releases/tag/0.2.1
+[0.2.0]: https://github.com/coltonbh/qccodec/releases/tag/0.2.0
+[0.1.0]: https://github.com/coltonbh/qccodec/releases/tag/0.1.0
