@@ -4,7 +4,7 @@ from importlib import metadata
 __version__ = metadata.version(__name__)
 
 
-from .main import encode, parse, parse_results  # noqa: F401
-from .models import registry  # noqa: F401
+from .codec import decode, encode  # noqa: F401
+from .registry import registry  # noqa: F401
 
-__all__ = ["parse", "parse_results", "encode", "registry"]
+__all__ = ["decode", "encode", "registry"]

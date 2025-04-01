@@ -6,6 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [unreleased]
 
+### Added
+
+- Logging to `decode` clearly detail what parsing actions are being taken and why on various filetypes.
+
+### Changed
+
+- 🚨 Refactored top-level `parse` function to a new signature `decode(program: str, calctype: CalcType, *, stdout: Optional[str] = None, directory: Optional[Union[str, Path]] = None, input_data: Optional[StructuredInputs] = None) -> StructureResults`.
+- Changed parsers to no longer set data on a data collector object but to rather be pure functions returning their parsed data.
+- Renamed `@parser` decorator to `@register` and accept `target` kwarg that tells the registry where to place the parsed data on the data collector object.
+- `DataCollector` now inherits from `dict` rather than being a `SimpleNamespace`.
+- Switched classes from pydantic `BaseModel` to `dataclasses` since I'm not using any advanced validation logic.
+
+### Removed
+
+- 🚨 `get_file_contents` function since we no longer pass filenames to top-level `decode` (formerly `parse`) function.
+- 🚨 `parse_results` function previously kept for backwards compatibility.
+- `pydantic` dependency.
+
 ## [0.7.5] - 2025-03-24
 
 ### Added

@@ -1,0 +1,203 @@
+[
+  {
+    "input_data": {
+      "keywords": { "purify": "no", "some-bool": false },
+      "structure": {
+        "extras": {
+          "xyz_comments": [
+            "-7.6408224649875081e+01",
+            "frame",
+            "0",
+            "xyz",
+            "file",
+            "generated",
+            "by",
+            "TeraChem"
+          ]
+        },
+        "symbols": ["O", "H", "H"],
+        "geometry": [
+          [0.02253100202055779, 0.017650541281621152, -0.012249224590258566],
+          [0.5009229290647228, 1.7183882047097168, 0.5180806031275688],
+          [1.1474421486817081, -0.4990239289188795, -1.3798296951400695]
+        ],
+        "identifiers": {}
+      },
+      "model": { "method": "hf", "basis": "sto-3g" },
+      "calctype": "gradient"
+    },
+    "success": true,
+    "results": {
+      "calcinfo_natoms": 3,
+      "calcinfo_nmo": 19,
+      "extras": {
+        "program_version": "v1.9-2023.09-dev [2407d3d72955905cdd9c0dproae51e9322b8c05fd4c]"
+      },
+      "files": {},
+      "energy": -76.40822464987508,
+      "gradient": [
+        [0.0015991486, 0.0011623983, -0.0008220843],
+        [-0.0033943838, 0.0083169673, 0.0080418029],
+        [0.0017952356, -0.0094793661, -0.0072197183]
+      ],
+      "freqs_wavenumber": []
+    },
+    "provenance": {
+      "program": "terachem",
+      "program_version": "v1.9-2023.09-dev [2407d3d72955905cdd9c0dproae51e9322b8c05fd4c]",
+      "scratch_dir": "/tmp/pytest-of-cbh/pytest-25"
+    }
+  },
+  {
+    "input_data": {
+      "keywords": { "purify": "no", "some-bool": false },
+      "structure": {
+        "extras": {
+          "xyz_comments": [
+            "-7.6408928705141307e+01",
+            "frame",
+            "1",
+            "xyz",
+            "file",
+            "generated",
+            "by",
+            "TeraChem"
+          ]
+        },
+        "symbols": ["O", "H", "H"],
+        "geometry": [
+          [-0.0053386711364530656, -0.00261553043559293, 0.0022647120399761672],
+          [0.5287862843003769, 1.6811208757184954, 0.4694505268747664],
+          [1.1474484433594334, -0.4414905008094153, -1.3457135713912014]
+        ],
+        "identifiers": {}
+      },
+      "model": { "method": "hf", "basis": "sto-3g" },
+      "calctype": "gradient"
+    },
+    "success": true,
+    "results": {
+      "calcinfo_natoms": 3,
+      "calcinfo_nmo": 19,
+      "extras": {
+        "program_version": "v1.9-2023.09-dev [2407d3d72955905cdd9c0dproae51e9322b8c05fd4c]"
+      },
+      "files": {},
+      "energy": -76.4089287051413,
+      "gradient": [
+        [0.0007735883, 0.0005355768, -0.0003640441],
+        [0.0001656072, -0.0021072255, -0.0013624922],
+        [-0.0009391978, 0.0015716465, 0.0017265376]
+      ],
+      "freqs_wavenumber": []
+    },
+    "provenance": {
+      "program": "terachem",
+      "program_version": "v1.9-2023.09-dev [2407d3d72955905cdd9c0dproae51e9322b8c05fd4c]",
+      "scratch_dir": "/tmp/pytest-of-cbh/pytest-25"
+    }
+  },
+  {
+    "input_data": {
+      "keywords": { "purify": "no", "some-bool": false },
+      "structure": {
+        "extras": {
+          "xyz_comments": [
+            "-7.6408947912944399e+01",
+            "frame",
+            "2",
+            "xyz",
+            "file",
+            "generated",
+            "by",
+            "TeraChem"
+          ]
+        },
+        "symbols": ["O", "H", "H"],
+        "geometry": [
+          [
+            -0.0027518072792723195, -0.000427657116540137, 0.0005666408039222766
+          ],
+          [0.5247357045375097, 1.6872703100387203, 0.4753268060078064],
+          [1.1489122790737563, -0.4498276963879335, -1.3498918473183281]
+        ],
+        "identifiers": {}
+      },
+      "model": { "method": "hf", "basis": "sto-3g" },
+      "calctype": "gradient"
+    },
+    "success": true,
+    "results": {
+      "calcinfo_natoms": 3,
+      "calcinfo_nmo": 19,
+      "extras": {
+        "program_version": "v1.9-2023.09-dev [2407d3d72955905cdd9c0dproae51e9322b8c05fd4c]"
+      },
+      "files": {},
+      "energy": -76.4089479129444,
+      "gradient": [
+        [0.0001367065, 7.05798e-5, -3.25781e-5],
+        [-5.57745e-5, -3.29821e-5, 4.5913e-5],
+        [-8.09322e-5, -3.7596e-5, -1.33348e-5]
+      ],
+      "freqs_wavenumber": []
+    },
+    "provenance": {
+      "program": "terachem",
+      "program_version": "v1.9-2023.09-dev [2407d3d72955905cdd9c0dproae51e9322b8c05fd4c]",
+      "scratch_dir": "/tmp/pytest-of-cbh/pytest-25"
+    }
+  },
+  {
+    "input_data": {
+      "keywords": { "purify": "no", "some-bool": false },
+      "structure": {
+        "extras": {
+          "xyz_comments": [
+            "-7.6408948109186298e+01",
+            "frame",
+            "3",
+            "xyz",
+            "file",
+            "generated",
+            "by",
+            "TeraChem"
+          ]
+        },
+        "symbols": ["O", "H", "H"],
+        "geometry": [
+          [
+            -0.0032577449777698984, -0.0004936265107325147,
+            0.0004692095484322728
+          ],
+          [0.5242653959243626, 1.6875516373465365, 0.47433292307120123],
+          [1.1498885399362921, -0.4500431510555349, -1.3488005384174662]
+        ],
+        "identifiers": {}
+      },
+      "model": { "method": "hf", "basis": "sto-3g" },
+      "calctype": "gradient"
+    },
+    "success": true,
+    "results": {
+      "calcinfo_natoms": 3,
+      "calcinfo_nmo": 19,
+      "extras": {
+        "program_version": "v1.9-2023.09-dev [2407d3d72955905cdd9c0dproae51e9322b8c05fd4c]"
+      },
+      "files": {},
+      "energy": -76.4089481091863,
+      "gradient": [
+        [3.50513e-5, -5.6371e-6, 1.96736e-5],
+        [-4.546e-7, -7.6209e-6, 8.1239e-6],
+        [-3.4594e-5, 1.32576e-5, -2.78001e-5]
+      ],
+      "freqs_wavenumber": []
+    },
+    "provenance": {
+      "program": "terachem",
+      "program_version": "v1.9-2023.09-dev [2407d3d72955905cdd9c0dproae51e9322b8c05fd4c]",
+      "scratch_dir": "/tmp/pytest-of-cbh/pytest-25"
+    }
+  }
+]
